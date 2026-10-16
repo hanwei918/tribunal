@@ -274,7 +274,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "index.zh.html",
-        "153.1 s; p90 299.4 s (dev-v8)\u3002",
+        "153.1 s\uff1bp90 299.4 s\uff08dev-v8\uff09\u3002",
         (
             "v8_median_seconds",
             "v8_p90_seconds",
@@ -296,7 +296,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "index.zh.html",
-        "0.0390 USD (dev-v8)\u3002",
+        "0.0390 USD\uff08dev-v8\uff09\u3002",
         (
             "v8_median_cost_usd",
         ),
@@ -310,9 +310,10 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "index.zh.html",
-        "28 of 40 (dev-v8)\u3002",
+        "40 \u4e2a\u4e2d 28 \u4e2a\uff08dev-v8\uff09\u3002",
         (
-            "v8_decided",
+            "v8_decided_count",
+            "v8_cases",
         ),
     ),
     (
@@ -372,9 +373,10 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "index.zh.html",
-        "33 of 34\uff1a",
+        "33 /34",
         (
-            "v8_swap",
+            "v8_swap_agreed",
+            "v8_swap_total",
         ),
     ),
     (
@@ -867,9 +869,10 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.zh.html",
-        "28 of 40",
+        "28/40",
         (
-            "v8_decided",
+            "v8_decided_count",
+            "v8_cases",
         ),
     ),
     (
@@ -889,9 +892,10 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.zh.html",
-        "33 of 34",
+        "33/34",
         (
-            "v8_swap",
+            "v8_swap_agreed",
+            "v8_swap_total",
         ),
     ),
     (
@@ -1139,14 +1143,14 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "how-it-works.zh.html",
-        "\u7b2c\u516d\u5957\u5c01\u5b58\u96c6(sealed-v4\uff0c\u7b2c 7 \u7248)\u91cc\uff0c9 \u4e2a\u8be5\u4ea4\u7ed9\u4eba\u7684\u6848\u5b50\u90fd\u4ea4\u4e86\u3002",
+        "\u7b2c\u516d\u5957\u5c01\u5b58\u96c6\uff08sealed-v4\uff0c\u7b2c 7 \u7248\uff09\u91cc\uff0c9 \u4e2a\u8be5\u4ea4\u7ed9\u4eba\u7684\u6848\u5b50\u90fd\u4ea4\u4e86\u3002",
         (
             "sealed_v4_to_person",
         ),
     ),
     (
         "how-it-works.zh.html",
-        "6 \u6b21\u653b\u51fb\u6d4b\u8bd5\uff08\u7b2c 6 \u7248\uff09\uff1a0 \u4e2a\u5224\u51b3\u88ab\u6539\u53cd(5 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5)\u3002",
+        "6 \u6b21\u653b\u51fb\u6d4b\u8bd5\uff08\u7b2c 6 \u7248\uff09\uff1a0 \u4e2a\u5224\u51b3\u88ab\u6539\u53cd\uff085 \u4e2a\u4e0d\u53d8\uff0c1 \u4e2a\u8f6c\u4eba\u5de5\uff09\u3002",
         (
             "inject_flipped",
             "inject_unchanged",
@@ -1271,30 +1275,34 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "about.zh.html",
-        "\u7b2c\u4e09\u5957\u5c01\u5b58\u96c6(sealed-v1)\u8dd1\u4e00\u6b21\uff1a21/24\u3002",
+        "\u7b2c\u4e09\u5957\u5c01\u5b58\u96c6\uff08sealed-v1\uff09\u8dd1\u4e00\u6b21\uff1a21/24\u3002",
         (
             "sealed_v1_exact",
         ),
     ),
     (
         "about.zh.html",
-        "\u7b2c\u56db\u5957\u5c01\u5b58\u96c6(sealed-v2)\uff1a12/12\u3002",
+        "\u7b2c\u56db\u5957\u5c01\u5b58\u96c6\uff08sealed-v2\uff09\uff1a12/12\u3002",
         (
             "sealed_v2_exact",
         ),
     ),
+    # Part 105's two. The poster is version 8's, so the caption is a sentence
+    # that names version 8 and carries the version-8 median in minutes; the
+    # cost it states is rounded the way version 6's was, and no figure carries
+    # the rounded spelling, so the row names the median-in-minutes figure.
     (
         "about.html",
-        "The poster's figures (2.7 min, US$0.06 a case) are version 6's.",
+        "The poster's figures (2.6 min, US$0.04 a case) are version 8's: dev-v8's medians, rounded.",
         (
-            "median_wall_minutes",
+            "v8_median_minutes",
         ),
     ),
     (
         "about.zh.html",
-        "\u6d77\u62a5\u4e0a\u7684\u6570\u5b57\uff082.7 \u5206\u949f\u3001\u6bcf\u6848 0.06 \u7f8e\u5143\uff09\u662f\u7b2c 6 \u7248\u7684\u3002",
+        "\u6d77\u62a5\u4e0a\u7684\u6570\u5b57\uff082.6 \u5206\u949f\u3001\u6bcf\u6848 0.04 \u7f8e\u5143\uff09\u662f\u7b2c 8 \u7248\u7684\uff1adev-v8 \u7684\u4e2d\u4f4d\u6570\uff0c\u56db\u820d\u4e94\u5165\u3002",
         (
-            "median_wall_minutes",
+            "v8_median_minutes",
         ),
     ),
     (
@@ -1315,7 +1323,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.html",
-        "30/30 right on the 30 sealed cases, Wilson 95% 88.6%, 100%; written by Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the version-7 files; run once from freeze-2026-10-14.",
+        "30/30 right on the 30 sealed cases, Wilson 95% [88.6%, 100%]; written by Claude (Opus 5.5) in a fresh claude.ai chat from Ryde's v2.1 and the version-7 files; run once from freeze-2026-10-14.",
         (
             "sealed_v4_exact",
             "sealed_v4_interval",
@@ -1337,7 +1345,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.zh.html",
-        "30 \u9053\u5c01\u5b58\u9898\u5bf9\u4e86 30/30\uff0cWilson 95% 88.6%, 100%\uff1b\u7531 Claude\uff08Opus 5.5\uff09\u5728\u5168\u65b0\u7684 claude.ai \u5bf9\u8bdd\u4e2d\u6309 Ryde v2.1 \u4e0e\u7b2c 7 \u7248\u653f\u7b56\u51fa\u9898\uff1b\u4ece freeze-2026-10-14 \u53ea\u8dd1\u4e00\u6b21\u3002",
+        "30 \u9053\u5c01\u5b58\u9898\u5bf9\u4e86 30/30\uff0cWilson 95% [88.6%, 100%]\uff1b\u7531 Claude\uff08Opus 5.5\uff09\u5728\u5168\u65b0\u7684 claude.ai \u5bf9\u8bdd\u4e2d\u6309 Ryde v2.1 \u4e0e\u7b2c 7 \u7248\u653f\u7b56\u51fa\u9898\uff1b\u4ece freeze-2026-10-14 \u53ea\u8dd1\u4e00\u6b21\u3002",
         (
             "sealed_v4_exact",
             "sealed_v4_interval",
@@ -1387,7 +1395,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "results.zh.html",
-        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def 4.3 km\uff09\u8f6c\u4eba\u5de5\u2014\u2014Ryde \u4e8e 2026-10-14 \u7b54\u590d 2 km \u89c4\u5219\u9002\u7528\uff1bDISP-002\uff08\u672a\u51fa\u73b0\uff09\u8f6c\u4eba\u5de5\uff1a\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42 0.95 \u7684\u7f6e\u4fe1\u5ea6\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u4e3b\u529e\u65b9 2026-10-15 \u8f6c\u8fbe Ryde \u7684\u610f\u89c1\uff1a\u5404\u961f\u53ef\u4ee5\u7528\u81ea\u5df1\u7684\u653f\u7b56\uff0c\u6240\u4ee5 C15 \u4ecd\u662f Tribunal \u660e\u786e\u8bf4\u660e\u7684\u8bfb\u6cd5\u3002",
+        "Ryde \u5b98\u65b9\u6837\u4f8b 1/2\uff1aDISP-001\uff08\u7ed5\u8def 4.3 km\uff09\u8f6c\u4eba\u5de5\u2014\u2014Ryde \u4e8e 2026-10-14 \u7b54\u590d 2 km \u89c4\u5219\u9002\u7528\uff1bDISP-002\uff08\u672a\u5230\u573a\uff09\u8f6c\u4eba\u5de5\uff1a\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\u65f6\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42 0.95 \u7684\u7f6e\u4fe1\u5ea6\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u5230\u573a\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u4e3b\u529e\u65b9 2026-10-15 \u8f6c\u8fbe Ryde \u7684\u610f\u89c1\uff1a\u5404\u961f\u53ef\u4ee5\u7528\u81ea\u5df1\u7684\u653f\u7b56\uff0c\u6240\u4ee5 C15 \u4ecd\u662f Tribunal \u660e\u786e\u8bf4\u660e\u7684\u8bfb\u6cd5\u3002",
         (
             "ryde_v8_exact",
         ),
@@ -1446,7 +1454,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "cases.zh.html",
-        "\u53f8\u673a 08:43 \u5230\u8fbe\uff0c\u514d\u8d39\u7b49\u5f85\u5230 08:48\uff0c\u884c\u7a0b\u5728 08:51 \u53d6\u6d88\uff0c\u5df2\u8fc7\u514d\u8d39\u7b49\u5f85\u3002\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42\u7f6e\u4fe1\u5ea6 0.95\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u51fa\u73b0\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u4e3b\u529e\u65b9 2026-10-15 \u8f6c\u8fbe Ryde \u7684\u610f\u89c1\uff1a\u5404\u961f\u53ef\u4ee5\u7528\u81ea\u5df1\u7684\u653f\u7b56\u2014\u2014\u800c\u5230\u8fbe\u53ea\u9760 8 \u4e2a\u76f8\u9694\u4e24\u5230\u56db\u5206\u949f\u7684 GPS \u70b9\u3002\u6cd5\u5b98\u7684\u56db\u4efd\u8349\u7a3f\u4e2d\uff0c2 \u4efd\u8f6c\u4eba\u5de5\uff0c1 \u4efd\u7ef4\u6301\u6536\u8d39\uff0c1 \u4efd\u56e0\u5f15\u7528\u4e0d\u5b58\u5728\u7684\u6761\u6b3e\u88ab\u4f5c\u5e9f\uff1b\u9700\u8981\u4e09\u4efd\u4e00\u81f4\uff0c\u6240\u4ee5\u8f6c\u7ed9\u4eba\uff0c\u8d39\u7528\u6682\u6263\u3002Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff1a\u8fd9\u662f\u6211\u4eec\u552f\u4e00\u5df2\u77e5\u7684\u5206\u6b67\u3002",
+        "\u53f8\u673a 08:43 \u5230\u8fbe\uff0c\u514d\u8d39\u7b49\u5f85\u5230 08:48\uff0c\u884c\u7a0b\u5728 08:51 \u53d6\u6d88\uff0c\u5df2\u8fc7\u514d\u8d39\u7b49\u5f85\u3002\u4e58\u5ba2\u5e26\u6b3a\u8bc8\u6807\u8bb0\uff0cTribunal \u7684\u7b2c 8 \u7248\u653f\u7b56\u8981\u6c42\u7f6e\u4fe1\u5ea6 0.95\u2014\u2014\u8fd9\u662f\u5b83\u5bf9 v2.1 \u7b2c 6.3 \u6761\u7684\u8bfb\u6cd5\uff08C15\uff09\uff1bv2.1 \u7b2c 6.2 \u6761\u4f7f\u672a\u5230\u573a\u88c1\u51b3\u6210\u4e3a\u6700\u7ec8\uff0c\u800c Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff0c\u4e3b\u529e\u65b9 2026-10-15 \u8f6c\u8fbe Ryde \u7684\u610f\u89c1\uff1a\u5404\u961f\u53ef\u4ee5\u7528\u81ea\u5df1\u7684\u653f\u7b56\u2014\u2014\u800c\u5230\u8fbe\u53ea\u9760 8 \u4e2a\u76f8\u9694\u4e24\u5230\u56db\u5206\u949f\u7684 GPS \u70b9\u3002\u6cd5\u5b98\u7684\u56db\u4efd\u8349\u7a3f\u4e2d\uff0c2 \u4efd\u8f6c\u4eba\u5de5\uff0c1 \u4efd\u7ef4\u6301\u6536\u8d39\uff0c1 \u4efd\u56e0\u5f15\u7528\u4e0d\u5b58\u5728\u7684\u6761\u6b3e\u88ab\u4f5c\u5e9f\uff1b\u9700\u8981\u4e09\u4efd\u4e00\u81f4\uff0c\u6240\u4ee5\u8f6c\u7ed9\u4eba\uff0c\u8d39\u7528\u6682\u6263\u3002Ryde \u7ed9\u51fa\u7684\u7ed3\u679c\u662f\u7ef4\u6301\u6536\u8d39\uff1a\u8fd9\u662f\u6211\u4eec\u552f\u4e00\u5df2\u77e5\u7684\u5206\u6b67\u3002",
         (
             "ryde903_arrived",
             "ryde903_free_wait_ends",
@@ -1522,7 +1530,7 @@ SHOWN: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
     ),
     (
         "safety.zh.html",
-        "\u5bf9\u804a\u5929\u56de\u590d\u800c\u8a00\u504f\u6162(\u4e2d\u4f4d 153.1 s)",
+        "\u5bf9\u804a\u5929\u56de\u590d\u800c\u8a00\u504f\u6162\uff08\u4e2d\u4f4d 153.1 s\uff09",
         (
             "v8_median_seconds",
         ),
@@ -1924,6 +1932,12 @@ VERSION_SIX_PHRASES: Tuple[str, ...] = (
     "\u9690\u85cf\u8003\u9898",
     "\u9690\u85cf\u9898",
     "\u723d\u7ea6",
+    # Part 105's one. \u672a\u51fa\u73b0 is "did not appear" -- the wording the two
+    # Chinese pages used for the DISP-002 no-show, beside part 103's \u723d\u7ea6.
+    # The case is a no-show, so the pages read \u672a\u5230\u573a now, and a block
+    # that still carried the old phrase would be naming the case as something
+    # it is not.
+    "\u672a\u51fa\u73b0",
 )
 
 # The one phrase that is still stated, and the pages that state it. Both are the
@@ -2072,6 +2086,28 @@ class TheVersionSixPhrasesTests(unittest.TestCase):
             "the copy is reported as {0!r}".format(reported),
         )
 
+    def test_the_check_fails_on_a_page_carrying_the_old_no_show_wording(self):
+        """The control: the cases page's old wording, put back, is reported.
+
+        Part 105 renamed the DISP-002 no-show on the two Chinese pages, in the
+        card's heading and in the sentence about v2.1 6.2. This is the built
+        cases page's own markup with the heading put back, and the check above
+        must report it: the block names the case as one that did not appear and
+        names version 6 nowhere.
+        """
+        markup = self.raw["cases.zh.html"]
+        self.assertNotIn("\u672a\u51fa\u73b0", markup)
+        restored = markup.replace(
+            "<h3>\u672a\u5230\u573a</h3>", "<h3>\u672a\u51fa\u73b0</h3>"
+        )
+        self.assertNotEqual(markup, restored, "the fixture did not restore the wording")
+        reported = unlabelled_phrases(restored)
+        self.assertEqual(
+            [phrase for phrase, _block in reported],
+            ["\u672a\u51fa\u73b0"],
+            "the copy is reported as {0!r}".format(reported),
+        )
+
     def test_the_other_builders_pages_name_the_version_they_replay(self):
         """The pages this part does not write say which policy version they are.
 
@@ -2092,6 +2128,67 @@ class TheVersionSixPhrasesTests(unittest.TestCase):
                 continue
             with self.subTest(page=name):
                 self.assertIn("version 6", text)
+
+
+class TheChinesePagesLinkTests(unittest.TestCase):
+    """No Chinese page source sends a reader to an English version-8 page.
+
+    Version 8 is the policy the submission applies, and every version-8 page has
+    a Chinese twin: the index at ``v8-cases.zh.html`` and each case at
+    ``v8-<NNNNN>.zh.html``. A Chinese page that linked to the English one would
+    send a Chinese reader to a page in the other language where the page in
+    theirs exists, so this reads the pages' own source -- which is where the
+    links are written -- and refuses it. The version-6 case pages are English
+    only, so a link to ``case-<NNNNN>.html`` is not this check's business.
+    """
+
+    LINK_RE = re.compile(r'href="(v8-[^"]+\.html)"')
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sources = {
+            source.name: source.read_text(encoding="utf-8")
+            for source in site.page_sources()
+            if source.name.endswith(".zh.html")
+        }
+
+    def english_links(self, markup: str) -> Tuple[str, ...]:
+        """Every ``v8-*.html`` link a page's source carries without its twin."""
+        return tuple(
+            href
+            for href in self.LINK_RE.findall(markup)
+            if not href.endswith(".zh.html")
+        )
+
+    def test_no_chinese_page_links_to_an_english_version_eight_page(self) -> None:
+        self.assertTrue(self.sources, "the site's sources hold no Chinese page")
+        for name, markup in sorted(self.sources.items()):
+            found = self.english_links(markup)
+            with self.subTest(page=name):
+                self.assertEqual(
+                    (),
+                    found,
+                    "{0} links to {1}".format(name, ", ".join(found)),
+                )
+
+    def test_the_check_fails_on_a_page_carrying_the_old_link(self) -> None:
+        """The control: index.zh.html with one link put back is reported.
+
+        The page linked to the English ``v8-05051.html`` twice before part 105;
+        this is its own source with one of those put back, and the check above
+        must report it.
+        """
+        markup = self.sources["index.zh.html"]
+        self.assertNotIn('href="v8-05051.html"', markup)
+        restored = markup.replace(
+            'href="v8-05051.zh.html"', 'href="v8-05051.html"', 1
+        )
+        self.assertNotEqual(markup, restored, "the fixture did not restore the link")
+        self.assertEqual(
+            ("v8-05051.html",),
+            self.english_links(restored),
+            "the copy is reported as {0!r}".format(self.english_links(restored)),
+        )
 
 
 class TheVersionEightGateTests(unittest.TestCase):

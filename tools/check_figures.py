@@ -101,9 +101,10 @@ DOCUMENTS: Tuple[str, ...] = (
     "ui/dist/safety.html",
     "ui/dist/safety.zh.html",
     # The two about pages. Part 97 moved the five version-6 figures the front
-    # page's tiles used to be the only place for, and the poster caption is
-    # where the median in minutes is stated now -- in a sentence that names
-    # version 6 itself. The pages are named here for that one figure.
+    # page's tiles used to be the only place for, and part 105 made the poster
+    # version 8's, so the caption is where the version-8 median in minutes is
+    # stated now -- in a sentence that names version 8 itself. The pages are
+    # named here for that one figure.
     "ui/dist/about.html",
     "ui/dist/about.zh.html",
     # The note part 90 adds, which states the table `eval.v8_report --report`
@@ -156,12 +157,6 @@ FIGURES: Tuple[Figure, ...] = (
             # "153.1 s; p90 299.4 s (dev-v8)" and is the version-8 figure's.
             r"(\d+\.\d+) s; p90 \d+\.\d+ s\.",
             r"(\d+\.\d+) s\uff1bp90 \d+\.\d+ s\u3002",
-            # The about page's poster caption, where the median in minutes is
-            # stated now: "The poster's figures (2.7 min, US$0.06 a case) are
-            # version 6's." and "\u6d77\u62a5\u4e0a\u7684\u6570\u5b57\uff082.7
-            # \u5206\u949f\u3001\u6bcf\u6848 0.06 \u7f8e\u5143\uff09...".
-            r"figures \((\d+\.\d+) min,",
-            r"\u6570\u5b57\uff08(\d+\.\d+) \u5206\u949f\u3001",
         ),
     ),
     Figure(
@@ -529,10 +524,17 @@ FIGURES: Tuple[Figure, ...] = (
             r"(\d+\.\d+) s at the median and \d+\.\d+ s at the 90th",
             r"\u4e2d\u4f4d (\d+\.\d+) s\uff0c\u7b2c 90",
             r"\u4e2d\u4f4d (\d+\.\d+) s \u5bf9\u804a\u5929",
-            r"\(\u4e2d\u4f4d (\d+\.\d+) s\)",
+            # The safety page's own Chinese sentence, which states the same
+            # measurement: "\u504f\u6162\uff08\u4e2d\u4f4d 153.1 s\uff09". Part 105
+            # gave the sentence full-width brackets, so the pattern reads those.
+            r"\uff08\u4e2d\u4f4d (\d+\.\d+) s\uff09",
             # The front page's own tile, which is where this measurement is
-            # stated now: "153.1 s; p90 299.4 s (dev-v8)", in both languages.
+            # stated now: "153.1 s; p90 299.4 s (dev-v8)" in English and
+            # "153.1 s\uff1bp90 299.4 s\uff08dev-v8\uff09" in Chinese. Part 105 gave
+            # the Chinese sentence full-width punctuation, so the tile is read
+            # in both spellings.
             r"(\d+\.\d+) s; p90 \d+\.\d+ s \(dev-v8\)",
+            r"(\d+\.\d+) s\uff1bp90 \d+\.\d+ s\uff08dev-v8\uff09",
         ),
     ),
     Figure(
@@ -541,8 +543,10 @@ FIGURES: Tuple[Figure, ...] = (
         (
             r"and (\d+\.\d+) s at the 90th percentile",
             r"\u7b2c 90 \u767e\u5206\u4f4d (\d+\.\d+) s",
-            # The front page's own tile: "p90 299.4 s (dev-v8)".
+            # The front page's own tile: "p90 299.4 s (dev-v8)" in English and
+            # "p90 299.4 s\uff08dev-v8\uff09" in Chinese.
             r"p90 (\d+\.\d+) s \(dev-v8\)",
+            r"p90 (\d+\.\d+) s\uff08dev-v8\uff09",
         ),
     ),
     Figure(
@@ -554,6 +558,15 @@ FIGURES: Tuple[Figure, ...] = (
             # results page's card: "2.6 min" and "2.6 \u5206\u949f".
             r"num\">(\d+\.\d+)<small>min</small>",
             r"num\">(\d+\.\d+)<small>\u5206\u949f</small>",
+            # The about page's poster caption, where this measurement is stated
+            # now: "The poster's figures (2.6 min, US$0.04 a case) are version
+            # 8's: dev-v8's medians, rounded." and "\u6d77\u62a5\u4e0a\u7684
+            # \u6570\u5b57\uff082.6 \u5206\u949f\u3001\u6bcf\u6848 0.04
+            # \u7f8e\u5143\uff09...". The caption states the version-8 median in
+            # minutes; the cost beside it is the same median rounded, which no
+            # figure spells, so the caption's minutes are what these read.
+            r"figures \((\d+\.\d+) min,",
+            r"\u6570\u5b57\uff08(\d+\.\d+) \u5206\u949f\u3001",
         ),
     ),
     Figure(
@@ -565,9 +578,11 @@ FIGURES: Tuple[Figure, ...] = (
             r"(\d+\.\d+) USD of model cost a case",
             r"\u6a21\u578b\u6210\u672c\u4e2d\u4f4d\u6570 (\d+\.\d+) USD",
             # The front page's own tile, which is where this cost is stated
-            # now: "$0.039" and "0.0390 USD (dev-v8)".
+            # now: "$0.039" and "0.0390 USD (dev-v8)" in English and
+            # "0.0390 USD\uff08dev-v8\uff09" in Chinese.
             r"num\">\$(\d+\.\d+)</div>",
             r"src\">(\d+\.\d+) USD \(dev-v8\)",
+            r"src\">(\d+\.\d+) USD\uff08dev-v8\uff09",
         ),
     ),
     Figure(
@@ -618,7 +633,10 @@ FIGURES: Tuple[Figure, ...] = (
         ("33 of 34", "33"),
         (
             r"\| position swap, all four fields \| (\d+ of 34)\b",
+            # The front page's own tile, "33 of 34" in English and "33/34" in
+            # Chinese, which part 105 rewrote as a fraction.
             r"data-count=\"(\d+)\">\d+</span><small> of 34",
+            r"data-count=\"(\d+)\">\d+</span><small>/34</small>",
             r"(\d+ of 34) at version 8",
             # the submission texts' own pain-point table
             r"in (\d+ of 34) cases",

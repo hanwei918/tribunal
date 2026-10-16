@@ -58,7 +58,7 @@ the driver.
   151 version-6 disputes. <!-- eval.v8_report; eval.business_value -->
 - **Inconsistent.** The judge rules four times, once with the positions swapped:
   at version 8 the swapped draft agreed with the panel on all four graded fields
-  in 33 of 34 cases at version 8 (`dev-v8`). <!-- eval.v8_report -->
+  in 33 of 34 cases (`dev-v8`). <!-- eval.v8_report -->
 - **Opaque.** Each ruling is a notice naming the evidence and the clause it
   rests on; the case page carries the six steps. <!-- README -->
 - **Unfair outcomes stuck.** A case the panel cannot decide goes to a person with

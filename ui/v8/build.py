@@ -440,7 +440,7 @@ WORDS: Mapping[str, Tuple[str, str]] = {
     "Filed by": ("Filed by", "\u63d0\u4ea4\u65b9"),
     "Amount contested": ("Amount contested", "\u4e89\u8bae\u91d1\u989d"),
     "Value band": ("Value band", "\u91d1\u989d\u533a\u95f4"),
-    "Published ruling": ("Published ruling", "\u516c\u5e03\u88c1\u51b3"),
+    "Published ruling": ("Published ruling", "\u6700\u7ec8\u7ed3\u679c"),
     "Referrals": ("Referrals", "\u8f6c\u529e"),
     "How it was decided": ("How it was decided", "\u5982\u4f55\u51b3\u5b9a"),
     "Agrees with the key": ("Agrees with the key", "\u4e0e\u7b54\u6848\u4e00\u81f4"),
@@ -455,18 +455,18 @@ WORDS: Mapping[str, Tuple[str, str]] = {
     "Claim": ("Claim {0}", "\u4e3b\u5f20 {0}"),
     "Evidence ids": ("Evidence ids", "\u8bc1\u636e\u7f16\u53f7"),
     "Clause ids": ("Clause ids", "\u6761\u6b3e\u7f16\u53f7"),
-    "Verdict": ("Verdict", "\u88c1\u5224\u5458\u7ed3\u8bba"),
+    "Verdict": ("Verdict", "\u4ee3\u7801\u6838\u67e5\u7ed3\u8bba"),
     "Kept": ("kept", "\u4fdd\u7559"),
-    "Dropped": ("dropped", "\u9a73\u56de"),
+    "Dropped": ("dropped", "\u5254\u9664"),
     "Draft": ("Draft", "\u8349\u7a3f"),
-    "Kind": ("Kind", "\u79cd\u7c7b"),
-    "Proposed": ("Proposed", "\u4e3b\u5f20"),
+    "Kind": ("Kind", "\u7c7b\u578b"),
+    "Proposed": ("Proposed", "\u63d0\u8bae\u7684\u88c1\u51b3"),
     "Confidence": ("Confidence", "\u7f6e\u4fe1\u5ea6"),
     "Validity": ("Validity", "\u662f\u5426\u6709\u6548"),
     "Valid": ("valid", "\u6709\u6548"),
     "Voided": ("voided", "\u4f5c\u5e9f"),
-    "Sampled": ("sampled", "\u62bd\u6837"),
-    "Position swapped": ("position-swapped", "\u4ea4\u6362\u7acb\u573a"),
+    "Sampled": ("sampled", "\u5e38\u89c4"),
+    "Position swapped": ("position-swapped", "\u53cc\u65b9\u5bf9\u8c03"),
     "No proposed ruling": ("no ruling was carried", "\u6ca1\u6709\u63d0\u51fa\u88c1\u51b3"),
     "No referee verdict": (
         "No referee verdict was recorded.",
@@ -480,14 +480,14 @@ WORDS: Mapping[str, Tuple[str, str]] = {
     "Fraud flags": ("Fraud flags", "\u6b3a\u8bc8\u6807\u8bb0"),
     "Required confidence": ("Required confidence", "\u6240\u9700\u7f6e\u4fe1\u5ea6"),
     "Safety flag": ("Safety flag", "\u5b89\u5168\u6807\u8bb0"),
-    "A person decides": ("A person decides", "\u662f\u5426\u4ec5\u4eba\u5de5"),
-    "Authority": ("The authority block", "\u6743\u9650\u533a\u5757"),
+    "A person decides": ("A person decides", "\u662f\u5426\u5fc5\u987b\u7531\u4eba\u51b3\u5b9a"),
+    "Authority": ("The authority block", "AI \u7684\u6743\u9650"),
     "Deviation": ("Deviation", "\u7ed5\u8def"),
     "Actual distance": ("Actual distance", "\u5b9e\u9645\u8ddd\u79bb"),
     "Recommended distance": ("Recommended distance", "\u63a8\u8350\u8ddd\u79bb"),
     "Deviation km": ("Deviation", "\u7ed5\u8def\u8ddd\u79bb"),
     "Tolerance": ("Tolerance", "\u5bb9\u5dee"),
-    "AI limit": ("AI limit", "\u4eba\u5de5\u667a\u80fd\u4e0a\u9650"),
+    "AI limit": ("AI limit", "AI \u53ef\u88c1\u51b3\u7684\u4e0a\u9650"),
     "The limit applies": ("The limit applies", "\u4e0a\u9650\u662f\u5426\u9002\u7528"),
     "Over the limit": ("Over the limit", "\u662f\u5426\u8d85\u8fc7\u4e0a\u9650"),
     "Free wait": ("Free wait", "\u514d\u8d39\u7b49\u5f85"),
@@ -528,12 +528,12 @@ WORDS: Mapping[str, Tuple[str, str]] = {
         "\u7ef4\u6301\u65f6\u53f8\u673a\u8865\u507f",
     ),
     "Refund already issued": ("Refund already issued", "\u5df2\u9000\u6b3e"),
-    "Commit": ("Commit", "\u63d0\u4ea4"),
+    "Commit": ("Commit", "\u4ee3\u7801\u7248\u672c"),
     "Wall seconds": ("Wall seconds", "\u7528\u65f6"),
-    "Tokens": ("Tokens", "\u4ee4\u724c"),
+    "Tokens": ("Tokens", "Token \u7528\u91cf"),
     "Cost": ("Cost", "\u6210\u672c"),
     "Model": ("Model", "\u6a21\u578b"),
-    "Gate": ("gate", "\u95f8\u95e8"),
+    "Gate": ("gate", "\u6743\u9650\u95f8\u95e8"),
     "Panel": ("panel", "\u5408\u8bae"),
     "No majority": ("no majority", "\u6ca1\u6709\u591a\u6570"),
     "The judge's own escalation": (
@@ -547,7 +547,7 @@ WORDS: Mapping[str, Tuple[str, str]] = {
         "Decided with no person",
         "\u65e0\u9700\u4eba\u5de5\u51b3\u5b9a",
     ),
-    "Gates": ("Gates", "\u95f8\u95e8"),
+    "Gates": ("Gates", "\u6743\u9650\u95f8\u95e8"),
     "Stopped before the judge": (
         "Stopped before the judge",
         "\u5728\u6cd5\u5b98\u4e4b\u524d\u88ab\u62e6\u4e0b",
@@ -577,7 +577,7 @@ WORDS: Mapping[str, Tuple[str, str]] = {
 TEXT: Mapping[str, Tuple[str, str]] = {
     "gate sentence": (
         "The referee and the judge were not asked: {gate}.",
-        "\u672a\u8be2\u95ee\u88c1\u5224\u5458\u4e0e\u6cd5\u5b98\uff1a{gate}\u3002",
+        "\u672a\u8fdb\u884c\u4ee3\u7801\u6838\u67e5\uff0c\u4e5f\u672a\u8be2\u95ee\u6cd5\u5b98\uff1a{gate}\u3002",
     ),
     "gate basis": ("{gate} ({basis})", "{gate}\uff08{basis}\uff09"),
     "gate ai limit": (
@@ -631,7 +631,7 @@ TEXT: Mapping[str, Tuple[str, str]] = {
         "\u5408\u8bae\uff1a{valid} \u4efd\u6709\u6548\u8349\u7a3f\u4e2d {agreeing} "
         "\u4efd\u4e00\u81f4",
     ),
-    "gate short": ("gate: {gate}", "\u95f8\u95e8\uff1a{gate}"),
+    "gate short": ("gate: {gate}", "\u6743\u9650\u95f8\u95e8\uff1a{gate}"),
     "agrees": (
         "Agrees with the key on all {fields} graded fields: {answer}.",
         "\u4e0e\u7b54\u6848\u4e00\u81f4\uff08\u5168\u90e8 {fields} \u9879\u8bc4\u5206"
@@ -645,7 +645,7 @@ TEXT: Mapping[str, Tuple[str, str]] = {
     "no": ("no", "\u5426"),
     "band AI_FINAL": (
         "the AI's ruling is final",
-        "\u4eba\u5de5\u667a\u80fd\u7684\u88c1\u51b3\u4e3a\u7ec8\u5c40",
+        "AI \u53ef\u76f4\u63a5\u5b9a\u6848",
     ),
     "band CONFIDENCE_0_80": (
         "a ruling needs {bar} confidence",
@@ -655,20 +655,20 @@ TEXT: Mapping[str, Tuple[str, str]] = {
     "hero lede": (
         "{category} \u00b7 {set} \u00b7 filed by the {party} \u00b7 "
         "{amount} contested",
-        "{category} \u00b7 {set} \u00b7 \u63d0\u4ea4\u65b9{party} \u00b7 "
+        "{category} \u00b7 {set} \u00b7 {party}\u63d0\u4ea4 \u00b7 "
         "\u4e89\u8bae\u91d1\u989d {amount}",
     ),
     "hero ruling": (
         "Published ruling: {ruling}",
-        "\u516c\u5e03\u88c1\u51b3\uff1a{ruling}",
+        "\u6700\u7ec8\u7ed3\u679c\uff1a{ruling}",
     ),
-    "index h1": ("The version-8 cases.", "\u7248\u672c 8 \u7684\u6848\u4ef6\u3002"),
+    "index h1": ("The version-8 cases.", "\u7b2c 8 \u7248\u7684\u6848\u4ef6\u3002"),
     "index lede": (
         "{total} disputes: dev-v8's {dev} and Ryde's own {ryde}, each on a page "
         "of its own, at policy version 8.",
         "{total} \u4e2a\u4e89\u8bae\uff1adev-v8 \u7684 {dev} \u4e2a\u4e0e Ryde "
         "\u81ea\u5df1\u7684 {ryde} \u4e2a\uff0c\u6bcf\u4e2a\u4e00\u9875\uff0c"
-        "\u653f\u7b56\u7248\u672c 8\u3002",
+        "\u6309\u7b2c 8 \u7248\u653f\u7b56\u3002",
     ),
     "count sets": (
         "dev-v8 {dev}, ryde-v8 {ryde}",
@@ -687,7 +687,7 @@ TEXT: Mapping[str, Tuple[str, str]] = {
     "col category": ("Category", "\u7c7b\u522b"),
     "col filed by": ("Filed by", "\u63d0\u4ea4\u65b9"),
     "col band": ("Value band", "\u91d1\u989d\u533a\u95f4"),
-    "col ruling": ("Published ruling", "\u516c\u5e03\u88c1\u51b3"),
+    "col ruling": ("Published ruling", "\u6700\u7ec8\u7ed3\u679c"),
     "col how": ("How it was decided", "\u5982\u4f55\u51b3\u5b9a"),
     "col agrees": ("Agrees with the key", "\u4e0e\u7b54\u6848\u4e00\u81f4"),
     "tokens": (
@@ -2254,14 +2254,25 @@ def _defuse(text: str) -> str:
 
 def case_page(case: V8Case, language: str) -> str:
     """One case's page in one language."""
-    return page(
-        language,
-        title="{0} {1} - {2} - Tribunal Agent".format(
-            label("Case", language),
+    # The head is the page's own language: a Chinese page's description is a
+    # Chinese sentence, with the category and the filing party in the words the
+    # page's own table gives them. The title is already the page's, because
+    # ``label`` and ``category_words`` are read in the language they are asked
+    # for.
+    if language == ZH:
+        description = (
+            "{0} \u7684\u6848\u4ef6 {1}\uff1a{2}\uff0c\u7531{3}\u63d0\u4ea4\u3002"
+            "\u8bc1\u636e\u3001\u53cc\u65b9\u8bba\u70b9\u3001\u5224\u51b3\u8349\u7a3f"
+            "\u548c\u6700\u7ec8\u7ed3\u679c\uff0c\u6309\u7b2c 8 \u7248\u653f\u7b56"
+            "\u3002"
+        ).format(
+            case.set_name,
             case.case_no,
             category_words(case.category, language),
-        ),
-        description=(
+            filed_by_words(case.filed_by, language),
+        )
+    else:
+        description = (
             "Case {0} of {1}: {2}, filed by the {3}. The evidence, both sides' "
             "arguments, the drafts and the ruling, at policy version 8.".format(
                 case.case_no,
@@ -2269,7 +2280,15 @@ def case_page(case: V8Case, language: str) -> str:
                 category_words(case.category, language),
                 filed_by_words(case.filed_by, language),
             )
+        )
+    return page(
+        language,
+        title="{0} {1} - {2} - Tribunal Agent".format(
+            label("Case", language),
+            case.case_no,
+            category_words(case.category, language),
         ),
+        description=description,
         main=case_main(case, language),
         en_href=case.link,
         zh_href=case.zh_link,
@@ -2278,10 +2297,20 @@ def case_page(case: V8Case, language: str) -> str:
 
 def index_page(cases: Sequence[V8Case], language: str) -> str:
     """The index in one language."""
+    if language == ZH:
+        title = "\u7b2c 8 \u7248\u6848\u4ef6 - Tribunal Agent"
+        description = (
+            "\u5168\u90e8 42 \u4e2a\u7b2c 8 \u7248\u6848\u4ef6\uff1adev-v8 "
+            "\u7684 40 \u4e2a\uff0c\u52a0\u4e0a Ryde \u81ea\u5df1\u7684 2 "
+            "\u4e2a\u3002"
+        )
+    else:
+        title = "The version-8 cases - Tribunal Agent"
+        description = "All 42 version-8 cases: dev-v8's 40 and Ryde's own 2."
     return page(
         language,
-        title="The version-8 cases - Tribunal Agent",
-        description="All 42 version-8 cases: dev-v8's 40 and Ryde's own 2.",
+        title=title,
+        description=description,
         main=index_main(cases, language),
         en_href=INDEX_PAGE,
         zh_href=INDEX_PAGE.replace(".html", ".zh.html"),
