@@ -44,6 +44,10 @@ CHIP_RULE = (
     "@media (max-width:560px){.chips .chip{white-space:normal;height:auto;"
     "min-height:24px;max-width:100%;padding:3px 10px;line-height:1.35}}"
 )
+# The same rule as the reviewer's page carries it since part 118: the page is in
+# the product site's shell, and the record's stylesheet confines every rule to the
+# record, the element with the class ``rv``.
+RECORD_CHIP_RULE = CHIP_RULE.replace("{.chips .chip{", "{.rv .chips .chip{")
 
 # The rule item 0 of part 59 adds after ``.mono``, as ``ui/v2/build.py`` writes it,
 # and the class the chat table's time cell carries beside ``mono``.
@@ -113,7 +117,7 @@ class TheCasePageChipWrapsTests(unittest.TestCase):
 
     def test_the_built_case_page_carries_the_rule(self):
         self.assertIn(
-            CHIP_RULE,
+            RECORD_CHIP_RULE,
             built("review-00207.html"),
             "ui/dist/review-00207.html does not carry the item-1 chip rule",
         )

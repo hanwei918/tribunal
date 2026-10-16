@@ -11,12 +11,14 @@ policy version 6: today's disputes, what was decided automatically, what went to
 a human, and -- for one case -- the whole decision, step by step, with the
 agents' own words.
 
-It is the **queue**. This page is ``ui/dist/queue.html`` and one page per case
-sits beside it at ``ui/dist/case-<NNNNN>.html``; the site's front door is the
-product site ``ui/site/build.py`` builds, at ``ui/dist/index.html``, and the
-evaluation replay ``ui/build.py`` builds now lives one level down under
-``ui/dist/replay/``. The code still lives in ``ui/v2/``, and every page here
-carries a link to the replay.
+It is the **queue**. This page is ``ui/dist/queue.html``, and the reviewer's
+page for each case sits beside it at ``ui/dist/review-<NNNNN>.html`` -- since
+part 118 in the product site's shell, with the record inside it in this module's
+own design; the 404 page wears the site's shell too, since part 117. The site's
+front door is the product site ``ui/site/build.py`` builds, at
+``ui/dist/index.html``, and the evaluation replay ``ui/build.py`` builds lives
+one level down under ``ui/dist/replay/``. The code still lives in ``ui/v2/``,
+and the queue page and every reviewer's page carry a link to the replay.
 
 What it reads
 -------------
@@ -563,8 +565,9 @@ NOTICE_TITLE = "Notice to the rider and the driver"
 
 # What every notice says above its first line. The notice is the decision put
 # into the parties' own words, and this page does not send it to either of them:
-# there is no mail, no account, no form and no request of any kind on it, which
-# the site's own self-containment is what makes true. A reader who took the
+# there is no mail and no account on it, and nothing on it sends what a reader
+# types anywhere -- the review form writes a command for the reviewer to copy
+# and run. A reader who took the
 # notice for something the two parties had been sent would be reading a page as
 # a delivery, so the page says what it is.
 NOTICE_PREVIEW = "Preview: this page sends nothing."
@@ -2773,6 +2776,58 @@ _JS = """
 # --------------------------------------------------------------------------
 # The shell every page is built in
 # --------------------------------------------------------------------------
+# The class the reviewer's page wraps its record in, inside the product site's
+# shell, and this builder's stylesheet confined to it. The page carries the
+# site's stylesheet for the shell and this one for the record; confining every
+# rule of this one to the record keeps the two from reaching each other's
+# elements -- the site's header and footer stay the site's, and the record's
+# tabs, rails and tables stay the queue's own design.
+RECORD_CLASS = "rv"
+
+
+def scoped_stylesheet(css: str, scope: str) -> str:
+    """``css`` with every rule confined to the elements inside ``scope``.
+
+    Comments go. ``:root``, ``html`` and ``body`` become the scope itself, and
+    every other selector is prefixed with it, so a custom property, a font and a
+    background set for the whole page are set for the record alone. ``@media``
+    and ``@supports`` groups are confined inside; any other at-rule is kept as
+    it is.
+    """
+    text = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+    out: List[str] = []
+    position = 0
+    while True:
+        opening = text.find("{", position)
+        if opening < 0:
+            out.append(text[position:].strip())
+            break
+        prelude = text[position:opening].strip()
+        depth, index = 1, opening + 1
+        while depth:
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+            index += 1
+        body = text[opening + 1 : index - 1]
+        if prelude.startswith(("@media", "@supports")):
+            out.append(prelude + "{" + scoped_stylesheet(body, scope) + "}")
+        elif prelude.startswith("@"):
+            out.append(prelude + "{" + body + "}")
+        else:
+            selectors = []
+            for selector in prelude.split(","):
+                head, _, rest = selector.strip().partition(" ")
+                if head in (":root", "html", "body"):
+                    selectors.append((scope + " " + rest).strip())
+                else:
+                    selectors.append(scope + " " + selector.strip())
+            out.append(",".join(selectors) + "{" + body + "}")
+        position = index
+    return "".join(part for part in out if part)
+
+
 def _shell(
     title: str,
     body: str,
@@ -2817,6 +2872,18 @@ def _shell(
         "{2}\n<script>{3}</script>\n</body>\n</html>\n"
     ).format(head, _CSS, body, _JS)
     return defuse_key_shaped(page)
+
+
+# The record's stylesheet: first a reset, then this builder's own rules, both
+# confined to the record. The site's stylesheet sets its own type, links,
+# tables and footer on every element of the page, and the record is inside the
+# page; the reset returns every element of the record but the drawings to the
+# browser's defaults, and it is written inside ``:where()`` so that it weighs no
+# more than a single class -- every rule of this builder's own that names an
+# element or a class weighs more and applies over it. The drawings are left out
+# because their colours are presentation attributes, which a reset would undo.
+RECORD_RESET = ".{0} :where(:not(svg, svg *)){{all:revert}}".format(RECORD_CLASS)
+RECORD_CSS = RECORD_RESET + scoped_stylesheet(_CSS, "." + RECORD_CLASS)
 
 
 # The product's mark, inline: a beam, a base, a crossbar and two pans. It is
@@ -6192,14 +6259,11 @@ def build_case_page(case: CaseData) -> str:
     panels.append(panel("decision", True, _decision_tab(case)))
     if case.trigger is not None:
         panels.append(panel("review", True, _review_tab(case)))
-    configuration = case.document.get("configuration") or {}
-    body = (
-        _topbar(
-            _mode_text(configuration.get("policy_version")),
-            "case",
-        )
-        + '<main class="wrap">\n'
-        + header
+    # Imported here rather than at the top: ``ui.v8.build`` imports this module.
+    from ui.v8 import build as v8
+
+    record = (
+        header
         + _dispute_block(case)
         + '<div class="tabs" role="tablist">'
         + tab_html
@@ -6207,16 +6271,34 @@ def build_case_page(case: CaseData) -> str:
         + "\n".join(panels)
         + "\n"
         + _footer(case)
-        + "\n</main>\n"
     )
-    return _shell(
-        "Case {0} - {1}".format(case.case_no, category_words),
-        body,
-        description="{0} - {1}".format(
-            category_words, _summary_line(case.case)
-        ),
-        canonical=SITE_ROOT + case.link,
-        og_type=OG_TYPE_CASE,
+    main = (
+        '<section class="band phero"><div class="wrap">\n'
+        '<p class="crumb"><a href="index.html">Home</a> / '
+        '<a href="cases.html#all">History</a> / '
+        '<a href="{0}">Case {1}</a> / The full record</p>\n'
+        '<p class="lede">The reviewer\'s record: every step of the decision{2}, '
+        "as the recorded version-6 run has it, in English.</p>\n"
+        "</div></section>\n"
+        "<style>{3}</style>\n"
+        '<div class="{4}"><div class="wrap">\n{5}\n</div></div>\n'
+        "<script>{6}</script>"
+    ).format(
+        _attribute(case.link),
+        _text(case.case_no),
+        ", the escalation packet and the review form" if case.trigger is not None else "",
+        RECORD_CSS,
+        RECORD_CLASS,
+        record,
+        _JS,
+    )
+    return v8.page(
+        v8.EN,
+        title="Case {0} - {1}".format(case.case_no, category_words),
+        description="{0} - {1}".format(category_words, _summary_line(case.case)),
+        main=main,
+        en_href=review_link_for(case.case_no),
+        zh_href="case-{0:05d}.zh.html".format(case.case_no),
     )
 
 

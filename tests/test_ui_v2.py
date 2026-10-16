@@ -386,18 +386,37 @@ def built_pages() -> Dict[str, str]:
     return _PAGES
 
 
-# The one page this builder writes in the product site's own shell rather than in
-# its own: the 404 page, since part 117. The checks that hold a page to this
-# builder's top bar, its link card, its stylesheet and its own links read every
-# other page; ``NotFoundTests`` holds the 404 page to the site's shell instead.
+# The pages this builder writes in the product site's own shell rather than in
+# its own: the 404 page, since part 117, and every reviewer's page, since part
+# 118 (``built_pages`` keys those by ``case.link``). The checks that hold a page
+# to this builder's top bar, its link card, its stylesheet and its own links
+# read the queue page alone; ``NotFoundTests`` and ``TheReviewerPagesTests``
+# hold the others to the site's shell instead.
 SITE_SHELL_PAGES = frozenset({v2.NOT_FOUND_LINK})
 
 
 def own_shell_pages() -> Dict[str, str]:
-    """Every page this builder writes in its own shell: all of them but the 404."""
+    """Every page this builder writes in its own shell: the queue page alone."""
     return {
-        name: text for name, text in built_pages().items() if name not in SITE_SHELL_PAGES
+        name: text
+        for name, text in built_pages().items()
+        if name not in SITE_SHELL_PAGES and not CASE_PAGE_KEY_RE.match(name)
     }
+
+
+def reviewer_pages() -> Dict[str, str]:
+    """Every reviewer's page, keyed as :func:`built_pages` keys it."""
+    return {
+        name: text for name, text in built_pages().items() if CASE_PAGE_KEY_RE.match(name)
+    }
+
+
+def main_of(page: str) -> str:
+    """The part of a page in the site's shell that this builder writes."""
+    found = re.search(r'<main id="main">(.*?)</main>', page, re.DOTALL)
+    if found is None:
+        raise AssertionError('the page carries no <main id="main">')
+    return found.group(1)
 
 
 def as_written(pages: Mapping[str, str]) -> Dict[str, str]:
@@ -2885,6 +2904,90 @@ class NotFoundTests(unittest.TestCase):
         self.assertEqual(self.page(), committed)
 
 
+class TheReviewerPagesTests(unittest.TestCase):
+    """Every reviewer's page: the record in the product site's shell, since part 118.
+
+    The record is this builder's own -- the dispute, the tabs, the rail, the
+    packet and the form, in its own stylesheet -- and the page around it is the
+    site's: its header, its language switch and its footer, read from the cases
+    page by :func:`ui.v8.build.page`. These are the checks the queue page's own
+    shell is held to, read on the part of the page this builder writes.
+    """
+
+    def test_every_reviewer_page_is_the_record_in_the_site_s_shell(self):
+        pages = reviewer_pages()
+        self.assertEqual(len(loaded_cases()), len(pages))
+        for name, page in sorted(pages.items()):
+            with self.subTest(page=name):
+                self.assertIn('<header class="top">', page)
+                self.assertIn('<footer class="band foot" id="foot">', page)
+                self.assertIn('<div class="{0}"><div class="wrap">'.format(v2.RECORD_CLASS), main_of(page))
+                self.assertIn('<a href="{0}">Case '.format(name), main_of(page))
+
+    def test_the_language_switch_goes_to_the_case_s_chinese_page(self):
+        for name, page in sorted(reviewer_pages().items()):
+            chinese = name.replace(".html", ".zh.html")
+            with self.subTest(page=name):
+                self.assertIn('href="{0}"'.format(chinese), page)
+                self.assertTrue((v2.DIST_DIR / chinese).is_file(), chinese)
+
+    def test_the_record_s_stylesheet_reaches_the_record_alone(self):
+        """Every rule of the record's stylesheet names the record first.
+
+        The page carries the site's stylesheet too; a rule of this one that did
+        not start at the record would restyle the site's header and footer.
+        """
+        self.assertTrue(v2.RECORD_CSS.startswith(v2.RECORD_RESET))
+        rules = stylesheet_rules(v2.RECORD_CSS)
+        self.assertGreater(len(rules), 100)
+        scope = "." + v2.RECORD_CLASS
+        for selector, _declarations in rules:
+            # A comma inside parentheses -- the reset's ``:not(svg, svg *)`` --
+            # separates arguments, not selectors.
+            for one in re.split(r",(?![^(]*\))", selector):
+                with self.subTest(selector=one):
+                    self.assertTrue(
+                        one.strip() == scope or one.strip().startswith(scope + " "),
+                        "{0!r} does not start at the record".format(one),
+                    )
+        for name, page in sorted(reviewer_pages().items()):
+            with self.subTest(page=name):
+                self.assertIn("<style>{0}</style>".format(v2.RECORD_CSS), main_of(page))
+
+    def test_every_link_in_the_record_is_a_file_here_or_an_anchor_on_the_page(self):
+        for name, page in sorted(reviewer_pages().items()):
+            scan = _ResourceScan()
+            scan.feed(main_of(page))
+            for _tag, url in scan.anchors:
+                with self.subTest(page=name, url=url):
+                    if url in EXTERNAL_LINKS:
+                        continue
+                    self.assertFalse(is_external_reference(url))
+                    path, _, fragment = url.partition("#")
+                    if not path:
+                        self.assertIn('id="{0}"'.format(fragment), page)
+                        continue
+                    self.assertTrue(
+                        (v2.DIST_DIR / path).is_file(),
+                        "{0} links to {1}, which is not committed".format(name, url),
+                    )
+
+    def test_the_record_loads_nothing(self):
+        for name, page in sorted(reviewer_pages().items()):
+            scan = _ResourceScan()
+            scan.feed(main_of(page))
+            with self.subTest(page=name):
+                self.assertEqual(
+                    [], [url for _tag, _attr, url in scan.references if is_external_reference(url)]
+                )
+
+    def test_what_this_builder_writes_carries_no_key_shaped_run(self):
+        pattern = re.compile(r"sk-[A-Za-z0-9_\-]{8,}")
+        for name, page in sorted(reviewer_pages().items()):
+            with self.subTest(page=name):
+                self.assertIsNone(pattern.search(main_of(page)))
+
+
 # --------------------------------------------------------------------------
 # The stylesheet: contrast, keyboard sorting and the width of a table
 # --------------------------------------------------------------------------
@@ -3312,8 +3415,10 @@ class StylesheetTests(unittest.TestCase):
         pages = {"queue.html": index_text(), case.link: built_pages()[case.link]}
         for name, page in sorted(pages.items()):
             # The page's stylesheet is not markup and its comments quote the
-            # selectors these checks look for, so the body is read on its own.
-            body = re.sub(r"<style>.*?</style>", "", page, flags=re.DOTALL)
+            # selectors these checks look for, so the body is read on its own;
+            # nor are its scripts, and the site's script quotes a selector for
+            # a link to the cases page's queue, which no other page carries.
+            body = re.sub(r"<(style|script)>.*?</\1>", "", page, flags=re.DOTALL)
             ids = set(re.findall(r'id="([^"]*)"', body))
             links = re.findall(r'href="#([^"]*)"', body)
             with self.subTest(page=name):

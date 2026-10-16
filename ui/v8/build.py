@@ -2211,8 +2211,11 @@ def page(
             '<link rel="alternate" hreflang="zh" href="{0}">'.format(zh_href),
         ),
     )
+    # Each replacement is a function, so a backslash in a page's own text -- a
+    # stylesheet's escape, a script's pattern -- is copied as it is rather than
+    # read as a group reference.
     for pattern, replacement in replacements:
-        text, count = pattern.subn(replacement, text, count=1)
+        text, count = pattern.subn(lambda _match, value=replacement: value, text, count=1)
         if count != 1:
             raise BuildError(
                 "the page shell {0} carries no {1} to set".format(
@@ -2227,9 +2230,8 @@ def page(
             )
         )
     text = text.replace(old, 'href="{0}"'.format(zh_href if language == EN else en_href))
-    text, count = MAIN_RE.subn(
-        '<main id="main">\n{0}\n</main>'.format(_defuse(main)), text, count=1
-    )
+    body = '<main id="main">\n{0}\n</main>'.format(_defuse(main))
+    text, count = MAIN_RE.subn(lambda _match: body, text, count=1)
     if count != 1:
         raise BuildError(
             'the page shell {0} carries no <main id="main"> to replace'.format(
