@@ -527,3 +527,18 @@ pre.expl{white-space:pre-wrap;font:14px/1.6 inherit;font-family:inherit;margin:8
 @media (max-width:520px){.menu .trybtn{display:none}}
 .cmp-t{display:block;font-family:var(--body);font-size:15px;line-height:1.6;color:var(--ink)}
 .cmp-p{display:block;margin-top:8px;font:12.5px/1.5 var(--mono);color:var(--accent)}
+
+/* web update 2026-10-16: footer disclaimer, the version-6 history drawer, the try-it phone, the business page */
+.fdisc{margin:18px 0 0;font-size:12px;line-height:1.55;color:var(--band-2);max-width:72ch}
+details.hist{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}
+details.hist>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:14px;padding:18px 0;font:600 clamp(20px,2.4vw,28px)/1.2 var(--display, inherit)}
+details.hist>summary::-webkit-details-marker{display:none}
+details.hist>summary::after{content:"+";margin-left:auto;font:400 28px/1 var(--mono);color:var(--muted)}
+details.hist[open]>summary::after{content:"\2212"}
+details.hist .hist-note{margin:0 0 28px;max-width:70ch}
+#phone{padding-top:56px;padding-bottom:40px}
+#phone .tphone-cap{text-align:center;max-width:62ch;margin:22px auto 0;color:var(--muted)}
+.biz-num{font:700 clamp(30px,4vw,44px)/1 var(--display, inherit);margin:6px 0 10px}
+@media (min-width:561px){.stats.s3 .stat:nth-child(3n+1){border-left:0}.stats.s3 .stat:nth-child(n+4){border-top:1px solid var(--band-line)}}
+.paper .stats.s3 .stat:nth-child(n+4){border-top-color:var(--line)}
+.biz-list{margin:0;padding-left:1.2em}.biz-list li{margin:0 0 10px;line-height:1.55}

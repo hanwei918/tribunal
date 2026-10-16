@@ -16,7 +16,7 @@ walk is checked to cover the rest of the repository and to exclude exactly
 
 **The product site is the second exemption, and it is named file by file.** The
 policy owner, Ji Guofang, designed the product site outside WorkBuddy and wrote
-its text in two languages: eleven of its 22 pages are Chinese, every English
+its text in two languages: twelve of its 24 pages are Chinese, every English
 page carries the language switch's own two characters, and the Chinese pages
 share a script that carries ten more. ``tools/site_import.py`` transcribed her
 files unchanged and ``ui/site/build.py`` builds them back out, so the rule --
@@ -253,9 +253,9 @@ class TheProductSiteTests(unittest.TestCase):
                 self.assertNotIn(name, IMPORTED_PAGES)
 
     def test_the_exemption_covers_every_chinese_page(self):
-        """Eleven Chinese pages, as her sources and as the copies built from them."""
+        """Twelve Chinese pages, as her sources and as the copies built from them."""
         chinese = sorted(name for name in IMPORTED_PAGES if name.endswith(".zh.html"))
-        self.assertEqual(2 * 11, len(chinese), chinese)
+        self.assertEqual(2 * 12, len(chinese), chinese)
         self.assertIn("ui/site/src/pages/index.zh.html", IMPORTED_PAGES)
         self.assertIn("ui/dist/index.zh.html", IMPORTED_PAGES)
 

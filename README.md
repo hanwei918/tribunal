@@ -55,11 +55,11 @@ eval.v8_report --report`). The sealed set `sealed-v4`, run once at version 7:
 
 ## The product site
 
-The front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: **eleven pages**, each in English (`*.html`) and Chinese (`*.zh.html`), with her images and a try-it page that runs this repository's own Python in the browser.
+The front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: **twelve pages**, each in English (`*.html`) and Chinese (`*.zh.html`), with her images and a try-it page with a phone demo.
 The site holds three layers of pages. The **version-8 case pages** are what Tribunal applies now: `v8-cases.html` indexes all 42 version-8 cases, and each of them has a page of its own in both languages, 86 files in all, built by `python3 -m ui.v8.build` from the committed runs.
 The **version-6 pages** are history: the 151 version-6 case pages, each in English and Chinese in the site's own design (`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files, built by `python3 -m ui.v6.build`), each linking to the reviewer's page with every step of the decision, the escalation packet and the review form (`review-<NNNNN>.html`), and the queue at `/queue.html`, both built by `python3 -m ui.v2.build` from the four version-6 runs.
-And the try-it page runs the **version-6** policy in the browser: the live try-it service stays **off**, because `try-config.js` leaves its address empty, so the page's in-browser checks run and no live run is offered.
-Her design, her page text and her front-end code are hers, imported unchanged and built here by `ui/site/build.py`; the try-it service `tryit/` is hers too.
+The try-it page is her phone demo: it replays five committed version-8 runs (cases 5051, 5001 and 5013, and the organisers' samples 902 and 903), and runs a reader's changes through four version-8 rules in the browser -- the safety flag, the SGD 50 limit, the 2 km limit and the contact rule POL-NS-23 -- with no model call. Her script that generated `ui/site/static/try/phone.js` from the runs is not in this repository; the version-6 in-browser checks are still built under `try/`, and no page links them.
+Her design, her page text and her front-end code are hers, imported unchanged and built here by `ui/site/build.py`; the try-it service `tryit/` is hers too. Her update of 2026-10-16 -- the business page, the phone demo, the Business link and the footer's disclaimer -- came in at part 111, with three sentences of the business page corrected to version 8.
 
 ## In numbers
 
@@ -222,8 +222,9 @@ run that shows it.
   ([the version-8 runs](docs/notes/2026-10-14-version-8-runs.md)).
 - **Version 8 has no appeal clause**, and the operations layer -- appeal, queue,
   review, risk and the escalation packet -- reads the version-6 runs (`ops/`).
-- **The try-it page runs version 6**, in the browser, with the live service off
-  (`tryit/`, `ui/dist/try-config.js`).
+- **The try-it phone replays recorded runs**: five version-8 cases, with four
+  version-8 rules applied in the browser to a reader's changes; its generator is
+  not in this repository.
 - **The 151 version-6 case pages are history**: the team's own policy frozen on
   2026-10-11, not what Tribunal applies now
   (`ui/dist/case-*.html`, in English and Chinese; the parties' words and the

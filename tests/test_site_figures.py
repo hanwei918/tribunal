@@ -1611,11 +1611,11 @@ VERSION_SENTENCES: Tuple[Tuple[str, str], ...] = (
     ),
     (
         "try.html",
-        "This page runs the team's version-6 policy in your browser; the submission applies version 8.",
+        "Policy version 8. A replay of committed runs and the version-8 rules in code: no model is called and nothing is sent.",
     ),
     (
         "try.zh.html",
-        "\u672c\u9875\u5728\u6d4f\u89c8\u5668\u91cc\u8fd0\u884c\u7684\u662f\u56e2\u961f\u7684\u7b2c 6 \u7248\u653f\u7b56\uff1b\u63d0\u4ea4\u7684\u7cfb\u7edf\u7528\u7684\u662f\u7b2c 8 \u7248\u3002",
+        "\u7b2c 8 \u7248\u653f\u7b56\u3002\u56de\u653e\u5df2\u63d0\u4ea4\u7684\u8fd0\u884c\u8bb0\u5f55\uff0c\u5e76\u5728\u4ee3\u7801\u91cc\u5957\u7528\u7b2c 8 \u7248\u89c4\u5219\uff1a\u4e0d\u8c03\u7528\u6a21\u578b\uff0c\u4e5f\u4e0d\u53d1\u9001\u4efb\u4f55\u5185\u5bb9\u3002",
     ),
 )
 
@@ -1950,6 +1950,7 @@ def names_version_six(text: str) -> bool:
 # appeal sentence, which names version 6 in its own words; every other phrase is
 # gone from the site.
 VERSION_SIX_PLACES: Tuple[Tuple[str, str], ...] = (
+    ("business.html", "within 30 days"),
     ("index.html", "within 30 days"),
     ("safety.html", "within 30 days"),
 )

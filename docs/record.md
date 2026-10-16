@@ -88,9 +88,9 @@ and the figures above, with the table `eval.v8_report` prints, are
 
 ## The product site
 
-The site's front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: 22 pages, each in English (`*.html`) and Chinese (`*.zh.html`), with the images they carry and a try-it page that runs this repository's own Python in the browser. Her design, her page text and her front-end code are hers; `tools/site_import.py` and `ui/site/build.py`, written in WorkBuddy, import them unchanged and build the site, and the try-it service `tryit/` is hers, imported unchanged.
+The site's front page is the **product site** the policy owner, Ji Guofang, designed outside WorkBuddy: 24 pages, each in English (`*.html`) and Chinese (`*.zh.html`), with the images they carry and a try-it page with a phone demo. Her design, her page text and her front-end code are hers; `tools/site_import.py` and `ui/site/build.py`, written in WorkBuddy, import them unchanged and build the site, and the try-it service `tryit/` is hers, imported unchanged.
 
-`python3 -m ui.site.build` writes the 22 pages into `ui/dist/`, copies the images and the try-it page's own files there, and builds the bundle the browser runs, `ui/dist/try/tribunal-core.zip`, from this repository's own modules, policy and template cases; `--check` holds every one of them to a fresh build. The queue the product view used to open on is at `ui/dist/queue.html`, and the live try-it service stays **off**: `try-config.js` leaves `window.TRIBUNAL_TRY_API` empty, so the page's in-browser checks run and no live run is offered.
+`python3 -m ui.site.build` writes the 24 pages into `ui/dist/`, copies the images and the try-it page's own files there, and builds the bundle the browser runs, `ui/dist/try/tribunal-core.zip`, from this repository's own modules, policy and template cases; `--check` holds every one of them to a fresh build. The queue the product view used to open on is at `ui/dist/queue.html`, and the live try-it service stays **off**: `try-config.js` leaves `window.TRIBUNAL_TRY_API` empty, so the page's in-browser checks run and no live run is offered.
 
 ## The live demo
 
@@ -782,9 +782,10 @@ subject to the PDPA without this repository making any compliance claim.
   ([`ops/appeal.py`](../ops/appeal.py), [`ops/queue.py`](../ops/queue.py),
   [`ops/review.py`](../ops/review.py), [`ops/risk.py`](../ops/risk.py),
   [`ops/escalation.py`](../ops/escalation.py)).
-- **The try-it page runs version 6.** Its in-browser checks are the team's own
-  policy and not v2.1, and the live service is off
-  ([`ui/dist/try-config.js`](../ui/dist/try-config.js), [`tryit/`](../tryit/)).
+- **The try-it phone replays recorded runs.** Five version-8 cases; four
+  version-8 rules run in the browser on a reader's changes; its generator is not
+  in this repository; the version-6 in-browser checks are still built under
+  `try/` and no page links them.
 - **The 151 version-6 case pages are history.** They are the team's own policy
   frozen on 2026-10-11, not what Tribunal applies now. Each is written in English
   and Chinese in the site's own design (`case-<NNNNN>.html` and
@@ -1262,7 +1263,7 @@ off 0.7 are each reported.
 | `tests/` | The suite. Nothing in it makes a model call. |
 | `ops/` | The support team's layer: the queue and its SLA routing, the escalation packet, the reviewer's closure, the evidence window, the appeal check, the risk signals and the chat-signal reader. It reads the pipeline's inputs and its recorded outputs and never feeds anything back. |
 | `integrations/` | The read-only WorkBuddy connector (`integrations/workbuddy/`): an MCP server that answers from the committed records, with no key and no network. |
-| `ui/` | `ui/site/build.py`, which builds the product site's 22 pages — the front page at `ui/dist/index.html` and its siblings — from the policy owner's sources under `ui/site/src/`, copies `ui/site/static/` in beside them and builds the bundle the try-it page loads; `ui/v2/build.py`, which builds the queue at `ui/dist/queue.html` and one page per case from the four version-6 runs; and `ui/build.py`, which builds the evaluation replay under `ui/dist/replay/`. |
+| `ui/` | `ui/site/build.py`, which builds the product site's 24 pages — the front page at `ui/dist/index.html` and its siblings — from the policy owner's sources under `ui/site/src/`, copies `ui/site/static/` in beside them and builds the bundle the try-it page loads; `ui/v2/build.py`, which builds the queue at `ui/dist/queue.html` and one page per case from the four version-6 runs; and `ui/build.py`, which builds the evaluation replay under `ui/dist/replay/`. |
 | `docs/` | `docs/notes/` — the dated decisions behind every number here; `docs/buddy-log/` — the WorkBuddy sessions; `docs/submission/` — the submission's own texts; `docs/governance/` — the incidents, threat model and privacy pages; `docs/roadmap/` — the policy base Ji Guofang drafted, kept as a roadmap and read by nothing. |
 | `precedents/` | The precedent library: human closures of decided cases. It holds the two closures `P-0001` and `P-0002`, and grows only when a reviewer closes one. |
 | `START-HERE.md` | The standing operating procedure for a session in this repository. Read it before changing anything. |

@@ -1,7 +1,7 @@
 """Tests for ``ui.site``: the policy owner's product site, built from this repository.
 
 The policy owner, Ji Guofang, designed the product site outside WorkBuddy --
-22 pages, each in English and Chinese, with the images they carry and a try-it
+24 pages, each in English and Chinese, with the images they carry and a try-it
 page that runs this repository's own Python in the browser.
 ``tools/site_import.py`` transcribed her files into ``ui/site/src/`` and
 ``ui/site/static/``, and ``ui/site/build.py`` builds the site back out of them
@@ -164,7 +164,7 @@ def file_part(url: str) -> str:
 
 
 def unresolved_links() -> List[Tuple[str, str]]:
-    """Every relative link or source in the 22 pages that is not a file in the site."""
+    """Every relative link or source in the 24 pages that is not a file in the site."""
     found: List[Tuple[str, str]] = []
     for name, text in sorted(pages().items()):
         scanner = scan(text)
@@ -279,19 +279,19 @@ class TheBuildersShareTheRootTests(unittest.TestCase):
 # The pages
 # --------------------------------------------------------------------------
 class ThePagesTests(unittest.TestCase):
-    """Twenty-two pages, assembled from the sources with every marker put back."""
+    """Twenty-four pages, assembled from the sources with every marker put back."""
 
     def test_the_site_is_the_pages_her_design_names(self):
         portability.require_the_same_libm()
-        self.assertEqual(22, site.PAGE_COUNT)
-        self.assertEqual(22, len(pages()))
-        self.assertEqual(22, len(site.page_sources()))
+        self.assertEqual(24, site.PAGE_COUNT)
+        self.assertEqual(24, len(pages()))
+        self.assertEqual(24, len(site.page_sources()))
 
     def test_every_page_carries_her_two_languages(self):
         portability.require_the_same_libm()
         english = {name for name in pages() if not name.endswith(".zh.html")}
-        self.assertEqual(11, len(english), sorted(english))
-        self.assertEqual(22, len(pages()))
+        self.assertEqual(12, len(english), sorted(english))
+        self.assertEqual(24, len(pages()))
 
     def test_no_page_carries_a_marker_left_over(self):
         portability.require_the_same_libm()
@@ -309,7 +309,7 @@ class ThePagesTests(unittest.TestCase):
             for path in site.page_sources()
             if "/*@include " in path.read_text(encoding="utf-8")
         }
-        self.assertEqual(22, len(marked), sorted(marked))
+        self.assertEqual(24, len(marked), sorted(marked))
 
     def test_the_shared_blocks_are_the_four_the_importer_factored_out(self):
         self.assertEqual(
@@ -996,11 +996,10 @@ class TheTryItServiceTests(unittest.TestCase):
             (site.DIST_DIR / "try-config.js").read_bytes(),
         )
 
-    def test_the_try_it_page_loads_her_script_and_the_config(self):
+    def test_the_try_it_page_loads_her_phone_script(self):
         portability.require_the_same_libm()
         page = pages()["try.html"]
-        self.assertIn('src="try/try.js"', page)
-        self.assertIn('src="try-config.js"', page)
+        self.assertIn('src="try/phone.js"', page)
 
     def test_her_service_is_committed_and_travels_in_the_bundle(self):
         for relative in TRYIT_FILES:

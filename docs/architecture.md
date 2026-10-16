@@ -36,8 +36,8 @@ image: each file stands alone.
 **Where a part is still version 6.** The views draw version 8, and three parts
 of the system are deliberately still version 6: the **operations layer** -- the
 queue, the escalation packet, the review, the appeal and the risk signals under
-`ops/`, which read the version-6 runs; the **try-it page**, which briefs at
-version 6 in the browser; and the **151 version-6 case pages**, which are
+`ops/`, which read the version-6 runs; the **try-it page**, a phone demo that
+replays recorded version-8 runs; and the **151 version-6 case pages**, which are
 history: each is written in English and Chinese in the site's own design
 (`case-<NNNNN>.html` and `case-<NNNNN>.zh.html`, 302 files), and each links to
 the reviewer's page (`review-<NNNNN>.html`) with every step of the decision, the

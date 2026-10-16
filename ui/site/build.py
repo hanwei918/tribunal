@@ -1,7 +1,7 @@
 """Build the product site into ``ui/dist/``, from sources committed here.
 
 The policy owner, Ji Guofang, designed and built the product site outside
-WorkBuddy: 22 pages -- sixteen real pages and six forwarding pages, each in
+WorkBuddy: 24 pages -- sixteen real pages and six forwarding pages, each in
 English (``*.html``) and Chinese (``*.zh.html``) -- plus the images they carry,
 a try-it page that runs this repository's own Python in the browser, and a small
 try-it service. ``tools/site_import.py`` transcribed her files into this
@@ -98,7 +98,7 @@ DIST_DIR = PROJECT_ROOT / "ui" / "dist"
 
 # The page a host serves for an address that is not one of the site's is the
 # product view's (``ui/dist/404.html``); this builder writes no page of its own
-# beyond the 22 the policy owner designed.
+# beyond the 24 the policy owner designed.
 
 # The marker a page carries where a shared block was. It names one file directly
 # under ``src/``, which is what is put back in its place.
@@ -185,7 +185,7 @@ BUNDLE_COMPRESS_LEVEL = 9
 
 # The page count her design fixes: eight pages per language plus six forwarding
 # pages. A build that found another number would be a build from other sources.
-PAGE_COUNT = 22
+PAGE_COUNT = 24
 
 # The film the front page's button and <video> element name, if it is ever
 # delivered. Its absence is not an error: it is what the build reads to decide
@@ -418,7 +418,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python3 -m ui.site.build",
         description=(
-            "Build the product site: the 22 pages, the images and the try-it "
+            "Build the product site: the 24 pages, the images and the try-it "
             "page's own files, and the bundle the browser runs. Read-only on "
             "everything outside ui/site/; no model call, no network."
         ),
