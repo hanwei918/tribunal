@@ -12,10 +12,11 @@ a human, and -- for one case -- the whole decision, step by step, with the
 agents' own words.
 
 It is the **queue**. This page is ``ui/dist/queue.html``, and the reviewer's
-page for each case sits beside it at ``ui/dist/review-<NNNNN>.html`` -- since
-part 118 in the product site's shell, with the record inside it in this module's
-own design; the 404 page wears the site's shell too, since part 117. The site's
-front door is the product site ``ui/site/build.py`` builds, at
+page for each case sits beside it at ``ui/dist/review-<NNNNN>.html``. Every page
+here wears the product site's shell -- the 404 page since part 117, the
+reviewer's pages since part 118 and this page since part 119 -- with the record
+inside it in this module's own design. The site's front door is the product
+site ``ui/site/build.py`` builds, at
 ``ui/dist/index.html``, and the evaluation replay ``ui/build.py`` builds lives
 one level down under ``ui/dist/replay/``. The code still lives in ``ui/v2/``,
 and the queue page and every reviewer's page carry a link to the replay.
@@ -167,7 +168,6 @@ from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
-from urllib.parse import quote
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -271,21 +271,10 @@ COVER_CAPTION = (
     "Poster made with Miora (Tencent); the people are generated, not real people."
 )
 
-# The site's own root, as the link scrapers need it: ``og:url`` and ``og:image``
-# are absolute URLs or a scraper resolves nothing. It is the address the README
-# and the submission's description publish.
-SITE_ROOT = "https://tribunal.edgeone.dev/"
-
 # The page a host serves for a path that does not exist. It is built with the
 # pages rather than beside them, so ``--check`` covers it too.
 NOT_FOUND_PATH = DIST_DIR / "404.html"
 NOT_FOUND_LINK = "404.html"
-
-# The five steps of the product's own sentence, and the shape of a page's
-# ``og:type``. ``og:type`` is ``website`` for the queue and the 404 page and
-# ``article`` for a case page, which is what the tag means.
-OG_TYPE_SITE = "website"
-OG_TYPE_CASE = "article"
 
 # The four runs the queue is drawn from, in the order the set selector lists
 # them. The name is the run's name in ``eval.v6_runs``; the label is what a
@@ -2828,52 +2817,6 @@ def scoped_stylesheet(css: str, scope: str) -> str:
     return "".join(part for part in out if part)
 
 
-def _shell(
-    title: str,
-    body: str,
-    *,
-    description: str,
-    canonical: str,
-    og_type: str,
-) -> str:
-    """One self-contained page: inline CSS, inline script, nothing external.
-
-    The head carries what a link scraper reads as well as what a browser does:
-    a one-sentence description, the tab icon, and an Open Graph card with
-    ``twitter:card`` beside it. Every URL in the card is absolute -- a scraper
-    resolves a relative one against nothing -- and the icon is an inline
-    ``data:`` SVG, so the page still loads nothing and stays one file.
-    """
-    image = SITE_ROOT + OG_IMAGE_LINK
-    head = "".join(
-        (
-            "<title>{0}</title>\n".format(_text(title)),
-            '<meta name="description" content="{0}">\n'.format(
-                _attribute(description)
-            ),
-            '<link rel="icon" href="{0}">\n'.format(_attribute(FAVICON_DATA_URI)),
-            '<meta property="og:title" content="{0}">\n'.format(_attribute(title)),
-            '<meta property="og:description" content="{0}">\n'.format(
-                _attribute(description)
-            ),
-            '<meta property="og:type" content="{0}">\n'.format(_attribute(og_type)),
-            '<meta property="og:url" content="{0}">\n'.format(
-                _attribute(canonical)
-            ),
-            '<meta property="og:image" content="{0}">\n'.format(_attribute(image)),
-            '<meta name="twitter:card" content="summary_large_image">\n',
-        )
-    )
-    page = (
-        "<!DOCTYPE html>\n"
-        '<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        "{0}<style>{1}</style>\n</head>\n<body>\n"
-        "{2}\n<script>{3}</script>\n</body>\n</html>\n"
-    ).format(head, _CSS, body, _JS)
-    return defuse_key_shaped(page)
-
-
 # The record's stylesheet: first a reset, then this builder's own rules, both
 # confined to the record. The site's stylesheet sets its own type, links,
 # tables and footer on every element of the page, and the record is inside the
@@ -2884,77 +2827,6 @@ def _shell(
 # because their colours are presentation attributes, which a reset would undo.
 RECORD_RESET = ".{0} :where(:not(svg, svg *)){{all:revert}}".format(RECORD_CLASS)
 RECORD_CSS = RECORD_RESET + scoped_stylesheet(_CSS, "." + RECORD_CLASS)
-
-
-# The product's mark, inline: a beam, a base, a crossbar and two pans. It is
-# drawn here rather than loaded, so the page needs no font and no image. The
-# same path data draws the tab icon below, so the two cannot drift apart. The
-# stroke is ``currentColor`` -- 51c.1 -- because the mark is drawn on the accent
-# tile, whose text colour is ``--on-accent`` and is white in the light theme and
-# a deep violet in the dark one; a hard-coded white would be illegible in the
-# dark theme, where the accent is a light lavender.
-SCALES_PATH = "M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"
-SCALES_MARK = (
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" '
-    'stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-    'stroke-linejoin="round" aria-hidden="true">'
-    '<path d="{0}"/></svg>'
-).format(SCALES_PATH)
-
-# The tab icon: the header's mark on the header's own accent tile, as an inline
-# SVG data URI. A ``data:`` URL is not a request, so the page stays one file
-# with nothing external in it; the ``#`` of each colour is percent-encoded
-# because a bare one would end the URL at the fragment. The tile is the light
-# theme's accent -- one file serves both themes, and the violet is what the mark
-# is drawn on in either.
-_FAVICON_SVG = (
-    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>"
-    "<rect width='24' height='24' rx='5' fill='#6d28d9'/>"
-    "<path d='{0}' fill='none' stroke='#ffffff' stroke-width='2' "
-    "stroke-linecap='round' stroke-linejoin='round'/></svg>"
-).format(SCALES_PATH)
-FAVICON_DATA_URI = "data:image/svg+xml," + quote(_FAVICON_SVG, safe="'/:=")
-
-
-def _mode_text(version: Any) -> str:
-    """The top bar's right-hand readout: the runs the pages replay.
-
-    It says what the pages are -- recorded runs at one policy version -- and
-    leaves the model to the footer, which names the run each page replays. The
-    version is the run's own, read from the record rather than typed here.
-    """
-    return "Recorded runs, policy version {0}".format(_text(version))
-
-
-def _topbar(mode: str, current: str) -> str:
-    """The top bar: the product, the way back to the site, and the queue.
-
-    The header carries the way back to the site -- the home page and the
-    version-8 cases -- and the queue. The replay beside this site is the
-    benchmark replay at policy version 1 -- historical, and not the pipeline
-    these pages show -- and a judge who met it in the header went to the
-    historical figures first, so it sits in the footer with the label that says
-    which pipeline it is.
-    """
-    # The item is a link on every page -- the current one is marked with
-    # ``aria-current`` rather than turned into a span, so the page's own item is
-    # still a link a reader can follow.
-    queue = (
-        '<a href="queue.html" class="on" aria-current="page">Queue</a>'
-        if current == "queue"
-        else '<a href="queue.html">Queue</a>'
-    )
-    return (
-        '<header class="top">\n<div class="top-in">\n'
-        '<a class="brand" href="index.html"><span class="mark">{0}</span>Tribunal'
-        "</a>\n"
-        '<nav class="nav" aria-label="Sites">'
-        '<a href="index.html">Home</a>'
-        '<a href="v8-cases.html">Version-8 cases</a>'
-        "{1}</nav>\n"
-        '<span class="mode">{2}</span>\n'
-        "</div>\n</header>\n"
-    ).format(SCALES_MARK, queue, _text(mode))
 
 
 # The two freezes these pages stand between, and what each one is. The runs this
@@ -2972,7 +2844,7 @@ FREEZE_NOTE = "Runs recorded at {0}. The final code freeze is {1}.".format(
 
 
 def _footer(case: CaseData) -> str:
-    """The footer every page carries: commit, freezes, policy version, model, replay."""
+    """The footer every record carries: commit, freezes, policy version, model, replay."""
     configuration = case.document.get("configuration") or {}
     return (
         '<footer class="foot">'
@@ -3585,10 +3457,11 @@ def build_index(cases: Sequence[CaseData]) -> str:
         "<thead>{0}</thead>\n"
         "<tbody>{1}</tbody>\n</table></div>\n</div>\n".format(_queue_head(), rows)
     )
-    body = (
-        _topbar(_mode_text(figures.policy_version), "queue")
-        + '<main class="wrap">\n'
-        + header
+    # Imported here rather than at the top: ``ui.v8.build`` imports this module.
+    from ui.v8 import build as v8
+
+    record = (
+        header
         + _how_it_works()
         + _links_row()
         + _featured_cards(cases)
@@ -3598,14 +3471,28 @@ def build_index(cases: Sequence[CaseData]) -> str:
         + filters
         + table
         + _footer(cases[0])
-        + "\n</main>\n"
     )
-    return _shell(
-        "Tribunal - today's disputes",
-        body,
+    # No script of this module's own: the site's shell already carries the
+    # script that filters, picks the set of and sorts a table with the id
+    # ``queue`` -- the cases page's table is this page's rows -- and a second
+    # copy of it would sort every column twice.
+    main = (
+        '<section class="band phero"><div class="wrap">\n'
+        '<p class="crumb"><a href="index.html">Home</a> / '
+        '<a href="cases.html#all">History</a> / The queue</p>\n'
+        '<p class="lede">The version-6 queue as a support team saw it, read from '
+        "the four recorded version-6 runs, in English.</p>\n"
+        "</div></section>\n"
+        "<style>{0}</style>\n"
+        '<div class="{1}"><div class="wrap">\n{2}\n</div></div>'
+    ).format(RECORD_CSS, RECORD_CLASS, record)
+    return v8.page(
+        v8.EN,
+        title="Tribunal - today's disputes",
         description=WHAT_TRIBUNAL_DOES,
-        canonical=SITE_ROOT + INDEX_PATH.name,
-        og_type=OG_TYPE_SITE,
+        main=main,
+        en_href=INDEX_PATH.name,
+        zh_href="cases.zh.html#all",
     )
 
 

@@ -102,7 +102,7 @@ The queue and the replay are static replays of the runs committed in this reposi
 
 **The evaluation replay is under `replay/`**, built by `python3 -m ui.build`. It is the benchmark page: the 29 corpus cases at policy version 1 with an answer key beside them and a miss marked where the ruling and the key disagree, and, beside it, the held-out set, the second sealed set and the organisers' sample case. Every page there carries its builder's own link back to `ui/dist/index.html`.
 
-The queue page and the replay are one self-contained file per page with no request of any kind, so they open from `file://` exactly as they do when served; the product site -- and the 404 page and the reviewer's pages, which wear its shell since parts 117 and 118 -- loads its images and the try-it page's own files from beside it and requests nothing else. The product site is published at the root, the queue beside it and the replay under `replay/` after the owner approves.
+The replay is one self-contained file per page with no request of any kind, so it opens from `file://` exactly as it does when served; the product site -- and the queue builder's pages, which wear its shell since parts 117 to 119 -- loads its images and the try-it page's own files from beside it and requests nothing else. The product site is published at the root, the queue beside it and the replay under `replay/` after the owner approves.
 
 ## How it was built, and by whom
 

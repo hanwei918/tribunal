@@ -94,6 +94,7 @@ from decimal import Decimal
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, FrozenSet, List, Mapping, Optional, Sequence, Tuple
+from urllib.parse import unquote
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -206,6 +207,12 @@ SITE_ASSET_PATHS = frozenset(
 # module covers its own builder's files, so the walk below reads the files this
 # builder writes and skips theirs. The lists are asked of the builders that
 # write them rather than typed here, so they cannot drift from what is built.
+# The site's address, which the link card's image is published under, and the
+# path the scales mark is drawn with: the site's shell carries both, since part
+# 119 the only shell any of this builder's pages wears.
+SITE_ROOT = "https://tribunal.edgeone.dev/"
+SCALES_PATH = "M12 4v16M8 20h8M5 7h14M5 7L2 13h6zM19 7l-3 6h6z"
+
 PRODUCT_SITE_PATHS = (
     site_build.written_paths() | v8_build.written_paths() | v6_build.written_paths()
 )
@@ -386,21 +393,15 @@ def built_pages() -> Dict[str, str]:
     return _PAGES
 
 
-# The pages this builder writes in the product site's own shell rather than in
-# its own: the 404 page, since part 117, and every reviewer's page, since part
-# 118 (``built_pages`` keys those by ``case.link``). The checks that hold a page
-# to this builder's top bar, its link card, its stylesheet and its own links
-# read the queue page alone; ``NotFoundTests`` and ``TheReviewerPagesTests``
-# hold the others to the site's shell instead.
-SITE_SHELL_PAGES = frozenset({v2.NOT_FOUND_LINK})
-
-
-def own_shell_pages() -> Dict[str, str]:
-    """Every page this builder writes in its own shell: the queue page alone."""
+# Every page this builder writes wears the product site's shell: the 404 page
+# since part 117, every reviewer's page since part 118 (``built_pages`` keys those
+# by ``case.link``) and the queue page since part 119. The queue page and the
+# reviewer's pages carry a record -- this builder's own part of the page, in its
+# own design -- and the 404 page carries none.
+def record_pages() -> Dict[str, str]:
+    """The queue page and every reviewer's page: the pages that carry a record."""
     return {
-        name: text
-        for name, text in built_pages().items()
-        if name not in SITE_SHELL_PAGES and not CASE_PAGE_KEY_RE.match(name)
+        name: text for name, text in built_pages().items() if name != v2.NOT_FOUND_LINK
     }
 
 
@@ -712,11 +713,14 @@ ICON_LINK_RE = re.compile(r'<link rel="icon" href="data:image/svg\+xml,')
 
 
 def links_other_than_the_icon(text: str) -> List[str]:
-    """Every ``<link>`` on a page that is not the inline tab icon."""
+    """Every ``<link>`` on a page that is not the inline tab icon or a language
+    alternate. An alternate names the same page in the other language and loads
+    nothing; the site's shell carries two on every page."""
     return [
         match.group(0)
         for match in re.finditer(r"<link\b[^>]*>", text)
         if not ICON_LINK_RE.match(match.group(0))
+        and not re.match(r'<link rel="alternate" hreflang="(en|zh)" href="[^"]+">$', match.group(0))
     ]
 
 
@@ -724,7 +728,7 @@ class SelfContainedTests(unittest.TestCase):
     """One file, no request, no web font, and ASCII throughout."""
 
     def test_no_page_references_an_external_resource(self):
-        for name, text in sorted(own_shell_pages().items()):
+        for name, text in sorted(built_pages().items()):
             with self.subTest(page=name):
                 scan = _ResourceScan()
                 scan.feed(text)
@@ -757,7 +761,7 @@ class SelfContainedTests(unittest.TestCase):
         carries it, so a link to an anchor that is not there is still a failure.
         """
         names = set(built_pages())
-        for name, text in sorted(own_shell_pages().items()):
+        for name, text in sorted(built_pages().items()):
             scan = _ResourceScan()
             scan.feed(text)
             for _tag, url in scan.anchors:
@@ -782,15 +786,22 @@ class SelfContainedTests(unittest.TestCase):
                             "the replay page {0} is not committed".format(url),
                         )
                         continue
-                    if url in PRODUCT_SITE_PATHS:
+                    path, _, fragment = url.partition("#")
+                    if path in PRODUCT_SITE_PATHS:
                         # A page another builder writes, sharing ``ui/dist/``
                         # with this one: it is not this builder's to build, so it
                         # is checked against the file on disk the way the replay
-                        # link is.
+                        # link is -- and an anchor on it against that file.
                         self.assertTrue(
-                            (v2.DIST_DIR / url).is_file(),
+                            (v2.DIST_DIR / path).is_file(),
                             "{0} links to {1}, which is not committed".format(name, url),
                         )
+                        if fragment:
+                            self.assertIn(
+                                'id="{0}"'.format(fragment),
+                                (v2.DIST_DIR / path).read_text(encoding="utf-8"),
+                                "{0} links to {1}, an anchor that page does not carry".format(name, url),
+                            )
                         continue
                     if url in SITE_ASSETS:
                         # A file the builder copies into the site: it is inside
@@ -839,9 +850,11 @@ class SelfContainedTests(unittest.TestCase):
         bytes cannot match; this is the assertion that it did.
         """
         pattern = re.compile(r"sk-[A-Za-z0-9_\-]{8,}")
-        for name, text in sorted(own_shell_pages().items()):
+        # Read on what this builder writes: the shell around it is the policy
+        # owner's design, published byte for byte as the cases page.
+        for name, text in sorted(built_pages().items()):
             with self.subTest(page=name):
-                self.assertIsNone(pattern.search(text))
+                self.assertIsNone(pattern.search(main_of(text)))
 
     def test_the_key_scan_can_fire(self):
         """A positive control, assembled from pieces so it is not a literal."""
@@ -1664,69 +1677,60 @@ class FrontDoorTests(unittest.TestCase):
             "the old ui/dist/v2/ directory is still committed",
         )
 
-    def test_every_page_carries_the_top_bar_and_a_link_to_the_replay(self):
-        """The header carries the queue; the replay is named in the footer.
+    def test_every_record_names_the_replay_in_its_footer(self):
+        """The replay is named in the record's footer, and only there.
 
-        The header used to carry the replay too, labelled for what it is, and a
-        judge who followed it went to the historical version-1 figures first.
-        It sits in the footer now, under the words that say which pipeline it
-        is, and the header keeps the queue.
+        The queue's own top bar used to carry the replay, labelled for what it
+        is, and a judge who followed it went to the historical version-1
+        figures first; it moved to the footer, under the words that say which
+        pipeline it is. Since part 119 every page is in the site's shell, and
+        the footer is the record's own, at the foot of the record.
         """
         self.assertEqual("Earlier benchmark replay (policy v1 runs)", v2.REPLAY_LABEL)
-        for name, text in sorted(own_shell_pages().items()):
+        link = '<a href="{0}">{1}</a>'.format(v2.REPLAY_INDEX, v2._text(v2.REPLAY_LABEL))
+        for name, text in sorted(record_pages().items()):
             with self.subTest(page=name):
-                self.assertIn('<header class="top">', text)
-                self.assertIn(
-                    '<a href="{0}">{1}</a>'.format(
-                        v2.REPLAY_INDEX, v2._text(v2.REPLAY_LABEL)
-                    ),
-                    text,
-                    "the footer does not carry the replay link",
-                )
-                self.assertIn('href="replay/index.html"', text)
-                self.assertIn(v2.REPLAY_LABEL, text)
+                record = main_of(text)
+                footer = record[record.index('<footer class="foot">'):]
+                self.assertIn(link, footer, "the record's footer does not carry the replay link")
+                self.assertEqual(1, text.count('href="replay/index.html"'))
                 self.assertNotIn("Evaluation replay", text)
-                self.assertIn(">Queue</a>", text)
-                self.assertIn('class="mark"', text)
-                # The nav leads back to the site and to the queue: the replay link is not in it.
-                nav = text[text.index('<nav class="nav"'):text.index("</nav>")]
-                self.assertNotIn(v2.REPLAY_LABEL, nav)
 
     def test_every_page_leads_back_to_the_site(self):
-        """Every page's header carries the way back to the site and the queue.
+        """The site's header leads home and to the cases; a record leads to the history.
 
-        The brand and the nav both lead back: the brand to the home page, and
-        the nav to the home page, the version-8 cases and the queue, in that
-        order. These are the version-6 support pages, and a reader who arrives
-        from a version-6 case page has no other way back to the site.
+        These are the version-6 support pages, and a reader who arrives from a
+        version-6 case page needs the way back: the site's own header on every
+        page, and on a page with a record, the way up -- Home, then the
+        version-6 history on the cases page.
         """
-        home = '<a href="index.html">Home</a>'
-        cases = '<a href="v8-cases.html">Version-8 cases</a>'
-        for name, text in sorted(own_shell_pages().items()):
+        for name, text in sorted(built_pages().items()):
+            header = text[text.index('<header class="top">'):text.index("</header>")]
             with self.subTest(page=name):
-                self.assertIn('<a class="brand" href="index.html">', text)
-                nav = text[text.index('<nav class="nav"'):text.index("</nav>")]
-                self.assertIn(home, nav, "the nav does not lead to the home page")
-                self.assertIn(
-                    cases, nav, "the nav does not lead to the version-8 cases"
-                )
-                self.assertIn(">Queue</a>", nav, "the nav does not lead to the queue")
-                self.assertLess(nav.index(home), nav.index(cases))
-                self.assertLess(nav.index(cases), nav.index(">Queue</a>"))
+                self.assertIn('href="index.html"', header)
+                self.assertIn('href="cases.html"', header)
+        for name, text in sorted(record_pages().items()):
+            crumb = re.search(r'<p class="crumb">(.*?)</p>', main_of(text), re.DOTALL)
+            with self.subTest(page=name):
+                self.assertIsNotNone(crumb, "the record carries no way up")
+                assert crumb is not None
+                home = crumb.group(1).index('<a href="index.html">Home</a>')
+                history = crumb.group(1).index('<a href="cases.html#all">History</a>')
+                self.assertLess(home, history)
 
-    def test_the_top_bar_names_the_run_every_page_replays(self):
-        """The bar says what the pages are; the model is named in the footer."""
+    def test_every_record_names_the_runs_it_replays(self):
+        """The heading says what the page is; the footer names policy and model."""
         first = cases()[0]["document"]
-        expected = "Recorded runs, policy version {0}".format(
-            (first.get("configuration") or {}).get("policy_version")
-        )
-        for name, text in sorted(own_shell_pages().items()):
+        version = (first.get("configuration") or {}).get("policy_version")
+        for name, text in sorted(record_pages().items()):
+            record = main_of(text)
             with self.subTest(page=name):
-                self.assertIn(expected, text)
+                self.assertIn("recorded version-{0} run".format(version), record)
                 self.assertNotIn("Replay - policy", text)
+                self.assertIn("<span>policy version {0}</span>".format(version), record)
                 self.assertIn(
                     '<span>model {0}</span>'.format(first.get("model")),
-                    text,
+                    record,
                     "the footer does not name the model",
                 )
 
@@ -2023,9 +2027,23 @@ class LandingPageTests(unittest.TestCase):
             text,
         )
 
+    def test_the_queue_page_runs_the_shell_s_script_alone(self):
+        """The site's shell sorts and filters the table; a second script would too.
+
+        The cases page's table is this page's rows, and the shell's script
+        already filters it, picks its set and sorts it by the ``queue`` id. A
+        copy of this builder's script beside it would bind every sort button
+        twice, and a column clicked once would sort and sort back.
+        """
+        text = index_text()
+        self.assertNotIn("<script", main_of(text))
+        self.assertEqual(1, text.count("<script>"))
+        self.assertIn('<table id="queue">', main_of(text))
+
     def test_every_page_says_what_it_replays_and_keeps_the_model_in_the_footer(self):
         text = index_text()
-        self.assertIn("Recorded runs, policy version", text)
+        self.assertIn("read from the four recorded version-6 runs", main_of(text))
+        self.assertIn("<span>model ", main_of(text))
         self.assertNotIn("Replay - policy", text)
 
     def test_the_five_steps_are_five_columns_on_a_wide_screen(self):
@@ -2770,12 +2788,17 @@ class LinkPreviewTests(unittest.TestCase):
         return text[: text.index("<style>")]
 
     def test_every_page_carries_a_description_a_favicon_and_an_open_graph_card(self):
-        for name in sorted(own_shell_pages()):
+        """The site's shell carries the card; ``page()`` sets its title and line.
+
+        The shell names no ``og:url``, as none of the site's pages does: a
+        scraper takes the address it was given.
+        """
+        for name in sorted(built_pages()):
             head = self.head_of(name)
             with self.subTest(page=name):
                 self.assertIn('<link rel="icon" href="data:image/svg+xml,', head)
                 self.assertIn('<meta name="description" content="', head)
-                for prop in ("og:title", "og:description", "og:type", "og:url", "og:image"):
+                for prop in ("og:title", "og:description", "og:type", "og:image"):
                     self.assertIn(
                         '<meta property="{0}" content="'.format(prop), head
                     )
@@ -2783,34 +2806,31 @@ class LinkPreviewTests(unittest.TestCase):
                     '<meta name="twitter:card" content="summary_large_image">', head
                 )
 
-    def test_the_card_urls_are_absolute_and_the_image_is_the_one_committed(self):
-        image = v2.SITE_ROOT + v2.OG_IMAGE_LINK
-        for name in sorted(own_shell_pages()):
+    def test_the_card_image_is_absolute_and_the_one_committed(self):
+        image = SITE_ROOT + v2.OG_IMAGE_LINK
+        for name in sorted(built_pages()):
             head = self.head_of(name)
             with self.subTest(page=name):
-                self.assertIn(
-                    '<meta property="og:image" content="{0}">'.format(
-                        v2._attribute(image)
-                    ),
-                    head,
-                )
-                url = re.search(r'<meta property="og:url" content="([^"]+)"', head)
-                self.assertIsNotNone(url, "the page carries no og:url")
-                assert url is not None
-                self.assertTrue(url.group(1).startswith(v2.SITE_ROOT))
-                self.assertEqual(v2.SITE_ROOT + name, url.group(1))
+                self.assertIn('<meta property="og:image" content="{0}">'.format(image), head)
+                self.assertNotIn('property="og:url"', head)
 
     def test_the_image_is_in_the_site_and_is_the_owners_file_byte_for_byte(self):
         committed = v2.DIST_DIR / v2.OG_IMAGE_LINK
         self.assertTrue(committed.is_file(), "og-image.png is not committed")
         self.assertEqual(v2.OG_IMAGE_SOURCE.read_bytes(), committed.read_bytes())
 
-    def test_the_tab_icon_is_the_header_mark_and_loads_nothing(self):
-        """The icon is an inline ``data:`` SVG built from the header's own path."""
-        self.assertIn(v2.SCALES_PATH, v2.SCALES_MARK)
-        self.assertTrue(v2.FAVICON_DATA_URI.startswith("data:image/svg+xml,"))
-        self.assertFalse(is_external_reference(v2.FAVICON_DATA_URI))
-        self.assertTrue(v2.FAVICON_DATA_URI.isascii())
+    def test_the_tab_icon_is_the_scales_mark_and_loads_nothing(self):
+        """Every page's icon is the shell's inline ``data:`` SVG of the scales."""
+        for name in sorted(built_pages()):
+            icon = re.search(r'<link rel="icon" href="([^"]+)">', self.head_of(name))
+            with self.subTest(page=name):
+                self.assertIsNotNone(icon, "the page carries no tab icon")
+                assert icon is not None
+                href = html.unescape(icon.group(1))
+                self.assertTrue(href.startswith("data:image/svg+xml,"))
+                self.assertFalse(is_external_reference(href))
+                self.assertTrue(href.isascii())
+                self.assertIn(SCALES_PATH, unquote(href))
 
     def test_the_description_is_one_sentence_from_the_record(self):
         for case in loaded_cases():
@@ -2953,39 +2973,6 @@ class TheReviewerPagesTests(unittest.TestCase):
         for name, page in sorted(reviewer_pages().items()):
             with self.subTest(page=name):
                 self.assertIn("<style>{0}</style>".format(v2.RECORD_CSS), main_of(page))
-
-    def test_every_link_in_the_record_is_a_file_here_or_an_anchor_on_the_page(self):
-        for name, page in sorted(reviewer_pages().items()):
-            scan = _ResourceScan()
-            scan.feed(main_of(page))
-            for _tag, url in scan.anchors:
-                with self.subTest(page=name, url=url):
-                    if url in EXTERNAL_LINKS:
-                        continue
-                    self.assertFalse(is_external_reference(url))
-                    path, _, fragment = url.partition("#")
-                    if not path:
-                        self.assertIn('id="{0}"'.format(fragment), page)
-                        continue
-                    self.assertTrue(
-                        (v2.DIST_DIR / path).is_file(),
-                        "{0} links to {1}, which is not committed".format(name, url),
-                    )
-
-    def test_the_record_loads_nothing(self):
-        for name, page in sorted(reviewer_pages().items()):
-            scan = _ResourceScan()
-            scan.feed(main_of(page))
-            with self.subTest(page=name):
-                self.assertEqual(
-                    [], [url for _tag, _attr, url in scan.references if is_external_reference(url)]
-                )
-
-    def test_what_this_builder_writes_carries_no_key_shaped_run(self):
-        pattern = re.compile(r"sk-[A-Za-z0-9_\-]{8,}")
-        for name, page in sorted(reviewer_pages().items()):
-            with self.subTest(page=name):
-                self.assertIsNone(pattern.search(main_of(page)))
 
 
 # --------------------------------------------------------------------------
@@ -3219,7 +3206,6 @@ class StylesheetTests(unittest.TestCase):
         )
         self.assertEqual("#ffffff", self.palette("light")["--on-accent"])
         self.assertEqual("#1e1035", self.palette("dark")["--on-accent"])
-        self.assertIn('stroke="currentColor"', v2.SCALES_MARK)
         self.assertIn("color:var(--on-accent)", v2._CSS)
         # 51d.1: the same fault on the second family of token backgrounds.
         light = self.palette("light")
@@ -3896,7 +3882,7 @@ class WebFontTests(unittest.TestCase):
     """No page loads a font, and none names one."""
 
     def test_no_stylesheet_imports_or_embeds_a_font(self):
-        for name, text in sorted(own_shell_pages().items()):
+        for name, text in sorted(built_pages().items()):
             styles = "".join(STYLE_RE.findall(text)).lower()
             with self.subTest(page=name):
                 for needle in ("@import", "@font-face", "url(", "fonts.googleapis", "fonts.gstatic"):
