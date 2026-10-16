@@ -45,8 +45,8 @@
   <g font-size="16" fill="#7C2D12"><text x="570" y="460">The gate stops it, or no majority, no valid draft, the judge escalates, or the confidence</text><text x="570" y="482">is under the bar (0.80 for SGD 10-50; 0.95 with a fraud flag). The reviewer gets one packet:</text><text x="570" y="504">the evidence and weights, both advocates' points, every draft and the judge's words.</text></g>
 
   <rect x="1330" y="400" width="430" height="130" rx="14" fill="#fff" stroke="#15803D" stroke-width="2"/>
-  <text x="1350" y="432" font-size="13" fill="#15803D" font-weight="700" letter-spacing="1">RULING AND NOTICE TO BOTH PARTIES</text>
-  <g font-size="16" fill="#14532D"><text x="1350" y="460">Refund, driver paid, or no change, with the</text><text x="1350" y="482">evidence and clause named. Under SGD 10 the</text><text x="1350" y="504">AI's ruling is final.</text></g>
+  <text x="1350" y="432" font-size="13" fill="#15803D" font-weight="700" letter-spacing="1">RULING AND NOTICE FOR BOTH PARTIES</text>
+  <g font-size="16" fill="#14532D"><text x="1350" y="460">Refund, driver compensated or no change, with</text><text x="1350" y="482">evidence and clause named; generated, not sent.</text><text x="1350" y="504">Under SGD 10 final, unless a fraud flag (0.95).</text></g>
 
   <g stroke-width="2.5" fill="none">
     <path d="M240 220 H276" stroke="#4C1D95" marker-end="url(#a)"/>
@@ -83,8 +83,8 @@
     <text x="630" y="782">A reviewer's closure can become a precedent; a policy gap</text>
     <text x="630" y="802">becomes an amendment a person approves (eval/policy_gaps.py).</text>
     <text x="1196" y="760" font-weight="700">SLA and routing</text>
-    <text x="1196" y="782">Queue lanes with targets (ops/config.json): safety 2 h,</text>
+    <text x="1196" y="782">Queue lanes with team-set targets (ops/config.json): safety 2 h,</text>
     <text x="1196" y="802">review 24 h, close 48 h. Every step is logged and hashed.</text>
   </g>
-  <text x="64" y="840" font-size="13" fill="#6B21A8">Not built: image analysis (property damage). Model: deepseek-flash through Tencent Cloud TokenHub (Singapore). Six model calls a case; two when the gate stops it.</text>
+  <text x="64" y="840" font-size="13" fill="#6B21A8">Not built: image analysis (property damage). Model: deepseek-flash through Tencent Cloud TokenHub (Singapore). Six model calls a case by design (seven with a retry); two when the gate stops it.</text>
 </svg>
