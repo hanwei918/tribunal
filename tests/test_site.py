@@ -57,7 +57,7 @@ FILM = "assets/tribunal-film.mp4"
 # opens on YouTube.
 EXTERNAL_LINKS = frozenset(
     {
-        "https://youtu.be/amkBjXyV1eg",
+        "https://youtu.be/3baqANrim4E",
         "https://arxiv.org/abs/2403.14720",
         "https://arxiv.org/abs/1803.09010",
         "https://aclanthology.org/2020.acl-main.442",
