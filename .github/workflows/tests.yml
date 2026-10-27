@@ -27,7 +27,10 @@ jobs:
       # interpreter failed is the whole of what this workflow is for.
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Ubuntu is named by release: on 2026-10-27 `ubuntu-latest` moved to
+        # 26.04, which has no Python 3.9, and the 3.9 cell failed in setup
+        # before a test ran. 24.04 still carries 3.9.
+        os: [ubuntu-24.04, macos-latest]
         python: ["3.9", "3.13"]
     steps:
       - uses: actions/checkout@v4

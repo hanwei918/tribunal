@@ -29,7 +29,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = PROJECT_ROOT / ".github" / "workflows" / "tests.yml"
 
 # The two runners and the two interpreters the matrix names, as they are written.
-OPERATING_SYSTEMS = ("ubuntu-latest", "macos-latest")
+# Ubuntu is named by release since part 121: `ubuntu-latest` became 26.04, which
+# has no Python 3.9.
+OPERATING_SYSTEMS = ("ubuntu-24.04", "macos-latest")
 PYTHON_VERSIONS = ('"3.9"', '"3.13"')
 
 # The names a workflow would use to reach a credential. The workflow runs no
